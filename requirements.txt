@@ -1,5 +1,0 @@
-requests
-unstructured[html]
-chromadb
-ollama
-python-dotenv
