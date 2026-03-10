@@ -39,9 +39,9 @@ cd frontend && pnpm install
 ## Running
 
 ```bash
-just dev-backend
-just dev-frontend
-just dev-scheduler
+just backend
+just frontend
+just scheduler
 ```
 
 Or manually without just:
