@@ -98,3 +98,5 @@ Embeddings are great for finding "related" things, but in high-stakes RAG, "rela
 
 - **Embeddings (The CV Screen):** Filters 1,000 applicants down to 25 based on keywords and high-level skills.
 - **Reranker (The Technical Interview):** The recruiter actually talks to those 25 people to determine who truly knows the job.
+
+![Expat RAG ERD](expat_rag_erd.png)
