@@ -10,6 +10,7 @@ const config: Config = {
     "^@/(.*)$": "<rootDir>/src/$1",
   },
   testMatch: ["**/__tests__/**/*.test.{ts,tsx}"],
+  passWithNoTests: true,
 };
 
 export default config;
