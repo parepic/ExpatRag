@@ -122,8 +122,23 @@
   }
   body {
     @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
   }
   html {
     @apply font-sans;
   }
+}
+
+/* ─── Patty Theme ─────────────────────────────────────────── */
+:root {
+  --color-bg:           #ffffff;
+  --color-bg-subtle:    #f7f7f5;
+  --color-border:       #e8e8e6;
+  --color-text:         #1a1a1a;
+  --color-text-muted:   #787774;
+  --color-accent:       #2f6ef7;
+  --color-accent-hover: #1a5ae0;
+  --color-success:      #0f9d58;
+  --color-error:        #d93025;
+  --sidebar-width:      240px;
 }
