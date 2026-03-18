@@ -1,5 +1,15 @@
 # ExpatRag
 
+A RAG-powered legal and compliance assistant for expats and small businesses in the Netherlands. It translates complex rules from government sources (IND, Belastingdienst, KVK) into plain, actionable answers — with every claim cited back to the official source.
+
+## Key Features
+
+- **Up-to-date document pipeline** — Scheduled scraper that pulls the latest Dutch and English documentation from IND, Rijksoverheid, and Belastingdienst
+- **RAG-based Q&A** — User questions are embedded, matched against retrieved legal chunks, and answered by an LLM
+- **Citation engine** — Every answer includes direct hyperlinks to the source paragraph on the government website, preventing hallucinated legal advice
+- **Bilingual** — Handles both Dutch and English government content
+- **Personalized answers** — Users provide personal details (visa type, employment situation, country of origin, etc.) that are used to tailor answers to their specific situation. User profiles are currently stored in browser cookies; a database-backed user system is planned for later
+
 ## Prerequisites
 
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) (Python package manager)

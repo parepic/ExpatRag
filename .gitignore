@@ -28,3 +28,11 @@ out/
 # OS
 .DS_Store
 Thumbs.db
+
+
+# LLMs
+.claude
+.superpowers
+docs/superpowers/
+CLAUDE.md
+AGENTS.md
