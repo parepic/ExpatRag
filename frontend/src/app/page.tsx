@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { isComplete } from "@/lib/profile";
 import { AnimatedChat } from "@/components/welcome/AnimatedChat";
+import { Button } from "@/components/ui/button";
 
 export default function WelcomePage() {
   const router = useRouter();
@@ -21,7 +22,7 @@ export default function WelcomePage() {
   if (!checked) return null;
 
   return (
-    <main className="relative min-h-screen flex flex-col items-center justify-center bg-white overflow-hidden">
+    <main className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-background">
       <AnimatedChat />
 
       {/* Foreground content */}
@@ -31,10 +32,10 @@ export default function WelcomePage() {
         transition={{ duration: 0.5 }}
         className="relative z-10 flex flex-col items-center text-center px-6"
       >
-        <h1 className="text-4xl md:text-5xl font-bold text-[--color-text] leading-tight max-w-2xl">
+        <h1 className="max-w-2xl text-4xl font-bold leading-tight text-foreground md:text-5xl">
           Your all-in-one expat moving assistant
         </h1>
-        <p className="mt-4 text-[--color-text-muted] text-lg max-w-md">
+        <p className="mt-4 max-w-md text-lg text-muted-foreground">
           Personalised legal and compliance guidance for expats in the Netherlands — cited from official sources.
         </p>
       </motion.div>
@@ -46,12 +47,13 @@ export default function WelcomePage() {
         transition={{ delay: 0.3, duration: 0.4 }}
         className="absolute bottom-16 z-10"
       >
-        <button
+        <Button
           onClick={() => router.push("/onboarding")}
-          className="px-8 py-3.5 bg-[--color-accent] hover:bg-[--color-accent-hover] text-white text-base font-semibold rounded-full shadow-md transition-colors"
+          size="lg"
+          className="rounded-full px-8 shadow-md"
         >
           Get Started
-        </button>
+        </Button>
       </motion.div>
     </main>
   );

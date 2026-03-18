@@ -12,6 +12,7 @@ import { REGISTRATION_OPTIONS } from "@/lib/constants/registration-status";
 import { HOUSING_OPTIONS } from "@/lib/constants/housing-options";
 import { SALARY_BANDS } from "@/lib/constants/salary-bands";
 import { RESIDENCY_OPTIONS } from "@/lib/constants/residency-options";
+import { Button } from "@/components/ui/button";
 
 interface FieldDef {
   key: string;
@@ -44,6 +45,34 @@ function loadValues(): Record<string, string | string[]> {
   return vals;
 }
 
+export function displayValue(key: string, val: string | string[] | undefined): string {
+  if (val === undefined || val === null) return "—";
+  if (Array.isArray(val)) return val.length > 0 ? val.join(", ") : "—";
+  if (key === "age_bracket") {
+    if (val === "under_30") return "Under 30";
+    if (val === "30_or_older") return "30 or older";
+  }
+  return val;
+}
+
+export function toYesNo(key: string, val: string | string[] | undefined): "yes" | "no" | null {
+  if (typeof val !== "string") return null;
+  if (key === "age_bracket") {
+    if (val === "under_30") return "yes";
+    if (val === "30_or_older") return "no";
+    // legacy "yes"/"no" stored before fix
+    if (val === "yes" || val === "no") return val;
+    return null;
+  }
+  if (val === "yes" || val === "no") return val;
+  return null;
+}
+
+export function fromYesNo(key: string, v: string): string {
+  if (key === "age_bracket") return v === "yes" ? "under_30" : "30_or_older";
+  return v;
+}
+
 export default function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState(loadValues);
@@ -70,44 +99,46 @@ export default function ProfilePage() {
     setEditing(false);
   }
 
-  function displayValue(key: string, val: string | string[] | undefined): string {
-    if (val === undefined || val === null) return "—";
-    if (Array.isArray(val)) return val.length > 0 ? val.join(", ") : "—";
-    return val;
-  }
-
   return (
     <div className="max-w-2xl mx-auto px-8 py-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold text-[--color-text]">Profile</h1>
+        <h1 className="text-xl font-semibold text-foreground">Profile</h1>
         {!editing ? (
-          <button
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
             onClick={handleEdit}
-            className="text-sm text-[--color-accent] hover:underline"
+            className="h-auto px-0 py-0 text-sm text-primary shadow-none hover:bg-transparent hover:text-primary/80"
           >
             Edit
-          </button>
+          </Button>
         ) : (
           <div className="flex gap-3">
-            <button onClick={handleCancel} className="text-sm text-[--color-text-muted] hover:text-[--color-text]">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleCancel}
+            >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleSave}
-              className="text-sm px-4 py-1.5 bg-[--color-accent] hover:bg-[--color-accent-hover] text-white rounded-[--radius] transition-colors"
+              size="sm"
             >
               Save
-            </button>
+            </Button>
           </div>
         )}
       </div>
 
       <div className="space-y-6">
         {FIELDS.map(({ key, label, type, options }) => (
-          <div key={key} className="border-b border-[--color-border] pb-5">
-            <p className="text-xs font-semibold uppercase tracking-wider text-[--color-text-muted] mb-2">{label}</p>
+          <div key={key} className="border-b border-border pb-5">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
             {!editing ? (
-              <p className="text-sm text-[--color-text]">{displayValue(key, saved[key])}</p>
+              <p className="text-sm text-foreground">{displayValue(key, saved[key])}</p>
             ) : (
               <div>
                 {type === "chip" && (
@@ -119,8 +150,8 @@ export default function ProfilePage() {
                 )}
                 {type === "yesno" && (
                   <YesNoToggle
-                    value={(draft[key] as "yes" | "no") ?? null}
-                    onChange={(v) => setDraft((prev) => ({ ...prev, [key]: v }))}
+                    value={toYesNo(key, draft[key])}
+                    onChange={(v) => setDraft((prev) => ({ ...prev, [key]: fromYesNo(key, v) }))}
                   />
                 )}
                 {type === "language" && (

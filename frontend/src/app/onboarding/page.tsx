@@ -17,6 +17,7 @@ import { HOUSING_OPTIONS } from "@/lib/constants/housing-options";
 import { SALARY_BANDS } from "@/lib/constants/salary-bands";
 import { RESIDENCY_OPTIONS } from "@/lib/constants/residency-options";
 import { useProfileGuard } from "@/hooks/useProfileGuard";
+import { Button } from "@/components/ui/button";
 
 interface Question {
   key: string;
@@ -84,8 +85,11 @@ export default function OnboardingPage() {
   function handleSubmit() {
     const key = currentQuestion.key;
     const value = answers[key];
-    const stored = Array.isArray(value) ? JSON.stringify(value) : String(value);
-    setField(key as any, stored);
+    let storedValue = Array.isArray(value) ? JSON.stringify(value) : String(value);
+    if (key === "age_bracket") {
+      storedValue = storedValue === "yes" ? "under_30" : "30_or_older";
+    }
+    setField(key as any, storedValue);
 
     if (isLast) {
       setCompleted(true);
@@ -112,46 +116,52 @@ export default function OnboardingPage() {
 
   if (completed) {
     return (
-      <main className="min-h-screen flex flex-col items-center justify-center bg-[--color-bg] px-4">
+      <main className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
         <motion.div
           initial={{ y: 40, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="w-full max-w-lg bg-white rounded-[--radius] border border-[--color-border] p-8 shadow-sm text-center"
+          className="w-full max-w-lg rounded-[--radius] border border-border bg-card p-8 text-center shadow-sm"
         >
           <div className="text-4xl mb-4">🎉</div>
           <h2 className="text-xl font-semibold mb-2">You're all set!</h2>
-          <p className="text-[--color-text-muted] mb-6">
+          <p className="mb-6 text-muted-foreground">
             We've saved your details and will use them to give you personalised advice.
           </p>
-          <button
+          <Button
             onClick={() => router.push("/chat")}
-            className="px-6 py-3 bg-[--color-accent] hover:bg-[--color-accent-hover] text-white rounded-[--radius] font-medium transition-colors"
+            className="px-6"
           >
             Start chatting with Patty
-          </button>
+          </Button>
         </motion.div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-[--color-bg] px-4">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
       {/* Back / Forward buttons */}
       <div className="w-full max-w-lg flex justify-between mb-4">
-        <button
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
           onClick={handleBack}
           disabled={isFirst}
-          className="text-sm text-[--color-text-muted] disabled:opacity-30 hover:text-[--color-text] transition-colors"
+          className="px-0 text-sm text-muted-foreground shadow-none hover:bg-transparent hover:text-foreground"
         >
           ← Back
-        </button>
-        <button
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
           onClick={handleForward}
           disabled={!hasAnswer || isLast}
-          className="text-sm text-[--color-text-muted] disabled:opacity-30 hover:text-[--color-text] transition-colors"
+          className="px-0 text-sm text-muted-foreground shadow-none hover:bg-transparent hover:text-foreground"
         >
           Forward →
-        </button>
+        </Button>
       </div>
 
       {/* Question card */}
@@ -159,7 +169,7 @@ export default function OnboardingPage() {
         <QuestionCard key={stepIndex} direction={direction}>
           <h2 className="text-lg font-semibold mb-1">{currentQuestion.label}</h2>
           {currentQuestion.sublabel && (
-            <p className="text-sm text-[--color-text-muted] mb-4">{currentQuestion.sublabel}</p>
+            <p className="mb-4 text-sm text-muted-foreground">{currentQuestion.sublabel}</p>
           )}
           <div className="mt-4">
             {currentQuestion.type === "chip" && (
@@ -183,13 +193,13 @@ export default function OnboardingPage() {
             )}
           </div>
           <div className="mt-6">
-            <button
+            <Button
               onClick={handleSubmit}
               disabled={!hasAnswer}
-              className="w-full py-2.5 bg-[--color-accent] hover:bg-[--color-accent-hover] disabled:opacity-40 text-white rounded-[--radius] font-medium transition-colors"
+              className="w-full"
             >
               {isLast ? "Finish" : "Next"}
-            </button>
+            </Button>
           </div>
         </QuestionCard>
       </AnimatePresence>

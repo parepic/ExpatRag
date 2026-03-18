@@ -1,59 +1,38 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
-
-export interface Todo {
-  id: string;
-  text: string;
-  completed: boolean;
-}
-
-export interface ChatSession {
-  id: string;
-  title: string;
-  createdAt: number;
-}
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { getStoredActiveChatId, setStoredActiveChatId } from "@/lib/chat-store";
 
 interface AppContextValue {
-  todos: Todo[];
-  addTodo: (text: string) => void;
-  toggleTodo: (id: string) => void;
-  chats: ChatSession[];
-  addChat: (title: string) => string;
-  activeChat: string | null;
-  setActiveChat: (id: string | null) => void;
+  activeChatId: string | null;
+  isChatStoreReady: boolean;
+  setActiveChatId: (id: string | null) => void;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [todos, setTodos] = useState<Todo[]>([]);
-  const [chats, setChats] = useState<ChatSession[]>([]);
-  const [activeChat, setActiveChat] = useState<string | null>(null);
+  const [activeChatIdState, setActiveChatIdState] = useState<string | null>(null);
+  const [isChatStoreReady, setIsChatStoreReady] = useState(false);
 
-  const addTodo = useCallback((text: string) => {
-    const id = crypto.randomUUID();
-    setTodos((prev) => [...prev, { id, text, completed: false }]);
+  useEffect(() => {
+    setActiveChatIdState(getStoredActiveChatId());
+    setIsChatStoreReady(true);
   }, []);
 
-  const toggleTodo = useCallback((id: string) => {
-    setTodos((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
-    );
-  }, []);
-
-  const addChat = useCallback((title: string): string => {
-    const id = crypto.randomUUID();
-    setChats((prev) => [{ id, title, createdAt: Date.now() }, ...prev]);
-    setActiveChat(id);
-    return id;
-  }, []);
-
-  return (
-    <AppContext.Provider value={{ todos, addTodo, toggleTodo, chats, addChat, activeChat, setActiveChat }}>
-      {children}
-    </AppContext.Provider>
+  const value = useMemo<AppContextValue>(
+    () => ({
+      activeChatId: activeChatIdState,
+      isChatStoreReady,
+      setActiveChatId: (id) => {
+        setStoredActiveChatId(id);
+        setActiveChatIdState(id);
+      },
+    }),
+    [activeChatIdState, isChatStoreReady],
   );
+
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
 
 export function useAppContext(): AppContextValue {

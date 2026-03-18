@@ -13,7 +13,7 @@ export function ProgressDots({ total, current }: ProgressDotsProps) {
           data-filled={i < current ? "true" : "false"}
           className={`
             w-2 h-2 rounded-full transition-colors
-            ${i < current ? "bg-[--color-accent]" : "bg-[--color-border]"}
+            ${i < current ? "bg-primary" : "bg-border"}
           `}
         />
       ))}

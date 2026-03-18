@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/button";
+
 interface ChipSelectProps {
   options: readonly string[];
   value: string | null;
@@ -8,20 +10,17 @@ export function ChipSelect({ options, value, onChange }: ChipSelectProps) {
   return (
     <div className="flex flex-wrap gap-2">
       {options.map((option) => (
-        <button
+        <Button
           key={option}
+          type="button"
+          variant={option === value ? "default" : "outline"}
+          size="sm"
           data-selected={option === value ? true : undefined}
           onClick={() => onChange(option)}
-          className={`
-            px-4 py-2 rounded-full border text-sm font-medium transition-colors
-            ${option === value
-              ? "border-[--color-accent] bg-[--color-accent] text-white"
-              : "border-[--color-border] bg-white text-[--color-text] hover:border-[--color-accent]"
-            }
-          `}
+          className="rounded-full px-4"
         >
           {option}
-        </button>
+        </Button>
       ))}
     </div>
   );

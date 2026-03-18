@@ -5,6 +5,7 @@ import ISO6391 from "iso-639-1";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 const languageNames = new Intl.DisplayNames(["en"], { type: "language" });
 
@@ -43,9 +44,13 @@ export function LanguageCombobox({ value, onChange }: LanguageComboboxProps) {
       )}
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <button className="w-full text-left px-3 py-2 border border-[--color-border] rounded-[--radius] text-sm text-[--color-text-muted]">
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full justify-start text-left font-normal text-muted-foreground"
+          >
             {value.length === 0 ? "Search languages…" : "Add another language…"}
-          </button>
+          </Button>
         </PopoverTrigger>
         <PopoverContent className="w-72 p-0">
           <Command>

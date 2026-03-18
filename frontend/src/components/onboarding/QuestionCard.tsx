@@ -29,7 +29,7 @@ export function QuestionCard({ children, direction = "forward" }: QuestionCardPr
       animate="center"
       exit="exit"
       transition={{ duration: 0.25, ease: "easeInOut" }}
-      className="w-full max-w-lg bg-white rounded-[--radius] border border-[--color-border] p-8 shadow-sm"
+      className="w-full max-w-lg rounded-[--radius] border border-border bg-card p-8 shadow-sm"
     >
       {children}
     </motion.div>
