@@ -70,32 +70,7 @@ uv add --package scheduler beautifulsoup4
 cd frontend && pnpm add axios
 ```
 
-## Supabase
-
-For now, lets just do a local instance of Supabase.
-
-1. Make sure you have docker running
-2. Install node.js
-3. cd backend
-4. npx supabase init
-5. npx supabase start
-   then you will see some output in the terminall. copy the Project URL from the APIs section, and then your secret key from the authentication keys section, and add them to the env file
-   to stop - supabase stop
-   to run next time, personally i dont use npx, i use supabase start
-6. uv add supabase python-dotenv
-
-7. supabase migration new <migration_name>
-8. Copy all the SQL commands that you made in the migration file
-9. supabase db reset
-10. now go to the studio link, and see the tables in the table editor.
-11. uv run uvicorn app.main:app --reload
-
-Absolutely. Here’s a cleaner, copy-paste replacement for the **Supabase** section.
-
 ## Supabase (Local Development)
-
-Use a local Supabase instance for backend development.
-
 ### 1) Prerequisites
 
 - Docker is running
