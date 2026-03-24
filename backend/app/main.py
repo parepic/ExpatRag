@@ -1,29 +1,18 @@
 from fastapi import FastAPI
-from supabase import create_client, Client
-from dotenv import load_dotenv
-import os
 
-load_dotenv()
-
-if not os.getenv("SUPABASE_API_URL") or not os.getenv("SUPABASE_SERVICE_KEY"):
-    raise ValueError("Need to set the supabase API keys")
-
-supabase: Client = create_client(
-        supabase_url=os.getenv("SUPABASE_API_URL"),
-        supabase_key=os.getenv("SUPABASE_SERVICE_KEY")
-    )
+from app.api.auth import router as auth_router
+from app.api.chats import router as chats_router
+from app.api.users import router as users_router
 
 app = FastAPI()
+
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
 
-@app.get("/users")
-def get_users():
-    try:
-        users = supabase.table("users").select("*").execute()
-        return users.data
-    except Exception as e:
-        print(f"Cannot query table: {str(e)}")
+app.include_router(auth_router)
+app.include_router(users_router)
+app.include_router(chats_router)
+

@@ -132,6 +132,10 @@ From `backend/`:
 uv run uvicorn app.main:app --reload
 ```
 
+Once running, access:
+- **Swagger UI** (interactive API docs): http://localhost:8000/docs
+- **ReDoc** (alternative API docs): http://localhost:8000/redoc
+
 ### Useful commands
 
 ```bash
