@@ -69,3 +69,75 @@ uv add --package backend sqlalchemy
 uv add --package scheduler beautifulsoup4
 cd frontend && pnpm add axios
 ```
+
+## Supabase (Local Development)
+### 1) Prerequisites
+
+- Docker is running
+- Node.js installed (v20+ recommended)
+
+### 2) Initialize and start Supabase
+
+From the backend folder:
+
+```bash
+cd backend
+npx supabase init       # run once per project
+npx supabase start
+```
+
+When startup completes, Supabase prints values like:
+
+- **API URL** (use this in .env file): `http://127.0.0.1:54321`
+- **Studio URL** (browser UI only): `http://127.0.0.1:54323`
+
+> Important: use the **API URL**, not the Studio URL, for `SUPABASE_API_URL`.
+
+### 3) Configure backend environment
+
+Create/update `backend/.env`:
+
+```env
+SUPABASE_API_URL=http://127.0.0.1:54321
+SUPABASE_SERVICE_KEY=<secret_key_from_supabase_start_output>
+```
+
+### 4) Install backend dependencies (if needed)
+
+From repo root (uv workspace):
+
+```bash
+uv add --package backend supabase python-dotenv
+```
+
+### 5) Create and apply schema changes
+
+From `backend/`:
+
+```bash
+supabase migration new <migration_name>
+# add SQL to the generated migration file
+supabase db reset
+```
+
+After reset, open Studio and verify tables in Table Editor.
+
+> If there is already something in `backend/supabase/migrations/<migration>.sql`, then directly run `supabase db reset`
+
+### 6) Run the backend API
+
+From `backend/`:
+
+```bash
+uv run uvicorn app.main:app --reload
+```
+
+### Useful commands
+
+```bash
+# stop local supabase
+supabase stop
+
+# start again later
+supabase start
+```
