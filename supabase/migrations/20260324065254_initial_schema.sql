@@ -71,7 +71,8 @@ CREATE TABLE sources (
     metadata JSONB,
     type TEXT,
     last_synced_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT now()
+    created_at TIMESTAMPTZ DEFAULT now(),
+    content TEXT
 );
 
 CREATE TABLE document_chunks (
