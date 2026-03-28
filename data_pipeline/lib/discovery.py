@@ -3,8 +3,9 @@ from urllib.parse import urljoin
 import requests
 from lxml import html
 
-from config import BASE_URL, SITEMAP_PATH
-from fetcher import scrape_do_url
+from lib.config import BASE_URL, SITEMAP_PATH
+
+from .fetcher import scrape_do_url
 
 EXCLUDE_PREFIXES = (
     "/en/service-contact",

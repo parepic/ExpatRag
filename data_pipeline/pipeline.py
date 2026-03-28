@@ -1,36 +1,19 @@
 """
-Data pipeline — scrape pages, then store in db.
+Data pipeline — ingest into `sources` (see ingest.ingest_runner), then chunk + embed into `document_chunks`.
 
 From repo root:
 
     uv run --package data-pipeline python3 data_pipeline/pipeline.py
     uv run --package data-pipeline python3 data_pipeline/pipeline.py --skip-data-fetch
-
-From within data_pipeline/:
-
-    uv run pipeline.py
-    uv run pipeline.py --skip-data-fetch
+    uv run --package data-pipeline python3 data_pipeline/pipeline.py --skip-chunk
 """
 
 import argparse
 import sys
 
-from config import PAGE_LIMIT
-from discovery import discover_pages
-from extractor import extract_documents
-from fetcher import fetch_pages
-from store import store_documents
-
-
-def _scrape() -> list[dict]:
-    pages = discover_pages()
-
-    if PAGE_LIMIT is not None:
-        pages = pages[:PAGE_LIMIT]
-        print(f"Limited to {PAGE_LIMIT} pages")
-
-    fetched = fetch_pages(pages)
-    return fetched
+from chunk import chunk_sources
+from ingest import ingest
+from lib.config import DOCUMENTS_JSONL_PATH
 
 
 def main() -> None:
@@ -38,20 +21,51 @@ def main() -> None:
     parser.add_argument(
         "--skip-data-fetch",
         action="store_true",
-        help="Skip discover/fetch/extract and Supabase upsert (for local dev when the DB is already seeded).",
+        help=(
+            "Skip scrape; load documents from JSONL and upsert into Supabase "
+            f"({DOCUMENTS_JSONL_PATH})."
+        ),
+    )
+    parser.add_argument(
+        "--skip-chunk",
+        action="store_true",
+        help="Skip embedding chunking (no writes to document_chunks).",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Max sources to process in the chunk step (only when chunking runs).",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Chunk step only: compute splits and embeddings but do not write to the DB.",
     )
     args = parser.parse_args()
 
     print("Starting data pipeline")
-    if not args.skip_data_fetch:
-        print("Mode: full scrape → extract → store")
-        fetched_pages = _scrape()
-        documents = extract_documents(fetched_pages)
-        store_documents(documents)
+    ingest(skip_data_fetch=args.skip_data_fetch)
+
+    if not args.skip_chunk:
+        stats = chunk_sources(limit=args.limit, dry_run=args.dry_run)
+        if args.dry_run:
+            print(
+                "Dry run completed: "
+                f"sources_processed={stats.sources_processed}, "
+                f"sources_skipped={stats.sources_skipped}, "
+                f"chunks={stats.chunks_saved}"
+            )
+        else:
+            print(
+                "Chunking completed: "
+                f"sources_processed={stats.sources_processed}, "
+                f"sources_skipped={stats.sources_skipped}, "
+                f"chunks_saved={stats.chunks_saved}"
+            )
     else:
-        print(
-            "Mode: --skip-data-fetch — not running scrape or store (use seeded data, e.g. supabase db reset)."
-        )
+        print("Skipping chunking (--skip-chunk).")
+
     print("Pipeline complete")
 
 

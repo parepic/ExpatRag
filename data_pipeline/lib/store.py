@@ -7,23 +7,12 @@ new URLs are inserted. This makes the pipeline safely re-runnable.
 
 from datetime import datetime, timezone
 
-from supabase import create_client
-
-from config import SUPABASE_URL, SUPABASE_SERVICE_KEY
-
-
-def _get_client():
-    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
-        raise RuntimeError(
-            "SUPABASE_API_URL and SUPABASE_SERVICE_KEY must be set. "
-            "Check backend/.env or your environment."
-        )
-    return create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+from lib.supabase_client import get_supabase_client
 
 
 def store_documents(documents: list[dict]) -> int:
     """Upsert documents into the `sources` table. Returns the number of rows written."""
-    client = _get_client()
+    client = get_supabase_client()
     now = datetime.now(timezone.utc).isoformat()
 
     rows = [

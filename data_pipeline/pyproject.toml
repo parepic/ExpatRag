@@ -5,7 +5,9 @@ requires-python = ">=3.12"
 dependencies = [
     "requests",
     "lxml",
-    "unstructured[html]",
+    "unstructured",
     "python-dotenv",
     "supabase",
+    "langchain-openai>=0.3.12",
+    "langchain-text-splitters>=0.3.8",
 ]

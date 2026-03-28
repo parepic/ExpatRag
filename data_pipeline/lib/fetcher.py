@@ -3,7 +3,7 @@ import urllib.parse
 
 import requests
 
-from config import REQUEST_DELAY, SCRAPE_DO_TOKEN
+from lib.config import REQUEST_DELAY, SCRAPE_DO_TOKEN
 
 USER_AGENT = "ExpatComplianceCopilot/1.0 (educational research project)"
 SCRAPE_DO_BASE = "https://api.scrape.do"
