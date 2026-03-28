@@ -25,3 +25,10 @@ save-pages:
 # Chunk sources and save embeddings
 chunk-pages:
     uv run --package scheduler python3 -m scheduler.tasks.chunk
+# Run the data pipeline (scrape → store)
+pipeline:
+    uv run --package data-pipeline python3 data_pipeline/pipeline.py
+
+# Skip scrape + store (use seeded DB, e.g. after supabase db reset)
+pipeline-skip-data-fetch:
+    uv run --package data-pipeline python3 data_pipeline/pipeline.py --skip-data-fetch
