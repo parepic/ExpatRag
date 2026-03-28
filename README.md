@@ -16,20 +16,18 @@ A RAG-powered legal and compliance assistant for expats and small businesses in 
 - [Node.js](https://nodejs.org/) (v20+)
 - [pnpm](https://pnpm.io/installation)
 - [just](https://github.com/casey/just#installation) (command runner)
+- [Supabase CLI](https://supabase.com/docs/guides/cli) (or use `npx supabase ...`)
 
 ## Project Structure
 
 ```
-backend/    → FastAPI API server
-frontend/   → Next.js web app
-scheduler/  → Scheduled scraping/chunking pipeline
+backend/    → FastAPI API server (auth, users, chats)
+frontend/   → Next.js web app (onboarding, chat, settings)
+scheduler/  → Data ingestion pipeline (save pages, chunk, embed)
+supabase/   → Local Supabase config + SQL migrations
 ```
 
 All Python packages are managed as a [uv workspace](https://docs.astral.sh/uv/concepts/workspaces/) from the repo root. Each service (`backend/`, `scheduler/`) has its own `pyproject.toml` declaring its dependencies, but they share a single `.venv` and `uv.lock` at the root.
-
-## Why just?
-
-This is a monorepo with multiple languages (Python + Node). There's no single package manager that spans both, so we use [just](https://github.com/casey/just) as a simple command runner to provide a unified interface. Instead of remembering different commands for each service, you run `just <recipe>` from the repo root. Run `just --list` to see all available recipes.
 
 ## Setup
 
@@ -39,105 +37,107 @@ just install
 
 This installs all Python dependencies (via uv) and frontend dependencies (via pnpm).
 
-Or manually:
+## Local Development (Step-by-step)
+
+### 1) Start Supabase (required first)
+
+Supabase is configured from the repository root (`supabase/config.toml`).
 
 ```bash
-uv sync --all-packages
-cd frontend && pnpm install
+# start local stack (Docker required)
+npx supabase start
+
+# print API URL + keys
+npx supabase status
 ```
 
-## Running
+If this is your first run (or after schema changes), apply migrations:
 
 ```bash
+npx supabase db reset
+```
+
+### 2) Create `.env` at repo root
+
+Use values from `npx supabase status`:
+
+```env
+SUPABASE_API_URL=http://127.0.0.1:54321
+SUPABASE_SERVICE_KEY=<service_role_key_from_supabase_status> (starts with sb_secret)
+OPENAI_API_KEY=<your_openai_key> ()
+```
+
+Notes:
+
+- For local Supabase, the `SUPABASE_SERVICE_KEY` should be in the terminal after starting supabase.
+
+### 3) Run app services (recommended with just)
+
+From the repo root, use separate terminals:
+
+```bash
+# terminal 1
+just backend
+
+# terminal 2
+just frontend
+
+# terminal 3 (pipeline)
+just scheduler
+```
+
+Additional scheduler commands:
+
+```bash
+just save-pages
+just chunk-pages
+```
+
+## Running (Manual Commands — Alternative to just)
+
+Use these only if you prefer not to run `just` recipes.
+
+From the repo root:
+
+```bash
+npx supabase start
+uv run --package backend fastapi dev backend/app/main.py
+cd frontend && pnpm dev
+uv run --package scheduler python3 -m scheduler.tasks.pipeline
+```
+
+Scheduler stages can also run individually:
+
+```bash
+uv run --package scheduler python3 -m scheduler.tasks.save_page
+uv run --package scheduler python3 -m scheduler.tasks.chunk
+```
+
+
+## Supabase (Useful urls)
+
+Useful URLs after startup:
+
+- API: `http://127.0.0.1:54321`
+- Studio: `http://127.0.0.1:54323`
+
+## Backend API Docs
+
+With backend running, open:
+
+- Swagger UI: `http://localhost:8000/docs`
+- ReDoc: `http://localhost:8000/redoc`
+
+## Quick Start (Order)
+
+```bash
+just install
+npx supabase start
+npx supabase status
+# create .env using the values above
 just backend
 just frontend
 just scheduler
 ```
 
-Or manually without just:
-
-```bash
-uv run --package backend fastapi dev backend/app/main.py
-cd frontend && pnpm dev
-uv run --package scheduler python3 scheduler/tasks/pipeline.py
-```
-
-## Adding Dependencies
-
-```bash
-uv add --package backend sqlalchemy
-uv add --package scheduler beautifulsoup4
-cd frontend && pnpm add axios
-```
-
-## Supabase (Local Development)
-### 1) Prerequisites
-
-- Docker is running
-- Node.js installed (v20+ recommended)
-
-### 2) Initialize and start Supabase
-
-From the backend folder:
-
-```bash
-cd backend
-npx supabase init       # run once per project
-npx supabase start
-```
-
-When startup completes, Supabase prints values like:
-
-- **API URL** (use this in .env file): `http://127.0.0.1:54321`
-- **Studio URL** (browser UI only): `http://127.0.0.1:54323`
-
-> Important: use the **API URL**, not the Studio URL, for `SUPABASE_API_URL`.
-
-### 3) Configure backend environment
-
-Create/update `backend/.env`:
-
-```env
-SUPABASE_API_URL=http://127.0.0.1:54321
-SUPABASE_SERVICE_KEY=<secret_key_from_supabase_start_output>
-```
-
-### 4) Install backend dependencies (if needed)
-
-From repo root (uv workspace):
-
-```bash
-uv add --package backend supabase python-dotenv
-```
-
-### 5) Create and apply schema changes
-
-From `backend/`:
-
-```bash
-supabase migration new <migration_name>
-# add SQL to the generated migration file
-supabase db reset
-```
-
-After reset, open Studio and verify tables in Table Editor.
-
-> If there is already something in `backend/supabase/migrations/<migration>.sql`, then directly run `supabase db reset`
-
-### 6) Run the backend API
-
-From `backend/`:
-
-```bash
-uv run uvicorn app.main:app --reload
-```
-
-### Useful commands
-
-```bash
-# stop local supabase
-supabase stop
-
-# start again later
-supabase start
-```
+Run backend, frontend, and scheduler in separate terminal sessions.

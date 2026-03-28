@@ -6,7 +6,7 @@ CREATE EXTENSION IF NOT EXISTS vector;
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     username TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL,
+    password TEXT NOT NULL, -- stores bcrypt hash, never plaintext
     nationality TEXT,
     purpose_of_stay TEXT,
     reason_for_visit TEXT,
@@ -23,8 +23,8 @@ CREATE TABLE users (
 CREATE TABLE sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    session_token TEXT UNIQUE NOT NULL,
-    expires_at TIMESTAMPTZ,
+    session_token TEXT UNIQUE NOT NULL, -- stores raw token; lives in HTTP-only cookie
+    expires_at TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -71,7 +71,8 @@ CREATE TABLE sources (
     metadata JSONB,
     type TEXT,
     last_synced_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT now()
+    created_at TIMESTAMPTZ DEFAULT now(),
+    content TEXT
 );
 
 CREATE TABLE document_chunks (

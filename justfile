@@ -16,4 +16,12 @@ frontend:
 
 # Run the scheduler pipeline
 scheduler:
-    uv run --package scheduler python3 scheduler/tasks/pipeline.py
+    uv run --package scheduler python3 -m scheduler.tasks.pipeline
+
+# Load demo pages into sources
+save-pages:
+    uv run --package scheduler python3 -m scheduler.tasks.save_page
+
+# Chunk sources and save embeddings
+chunk-pages:
+    uv run --package scheduler python3 -m scheduler.tasks.chunk
