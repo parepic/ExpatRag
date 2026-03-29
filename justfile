@@ -14,14 +14,18 @@ backend:
 frontend:
     cd frontend && pnpm dev
 
-# Run the scheduler pipeline
-scheduler:
-    uv run --package scheduler python3 -m scheduler.tasks.pipeline
+# Full pipeline: ingest (scrape → JSONL → store) → chunk
+pipeline-full:
+    uv run --package data-pipeline python3 data_pipeline/pipeline.py
 
-# Load demo pages into sources
-save-pages:
-    uv run --package scheduler python3 -m scheduler.tasks.save_page
+# Ingest from JSONL only → store (no HTTP)
+ingest-from-json:
+    uv run --package data-pipeline python3 data_pipeline/ingest.py --skip-data-fetch
 
-# Chunk sources and save embeddings
+# Ingest only (scrape → data_pipeline/data/documents.jsonl → store)
+ingest:
+    uv run --package data-pipeline python3 data_pipeline/ingest.py
+
+# Chunk sources only (no ingest)
 chunk-pages:
-    uv run --package scheduler python3 -m scheduler.tasks.chunk
+    uv run --package data-pipeline python3 data_pipeline/chunk.py

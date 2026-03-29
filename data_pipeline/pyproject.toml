@@ -1,10 +1,13 @@
 [project]
-name = "scheduler"
+name = "data-pipeline"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
+    "requests",
+    "lxml",
+    "unstructured",
+    "python-dotenv",
+    "supabase",
     "langchain-openai>=0.3.12",
     "langchain-text-splitters>=0.3.8",
-    "python-dotenv>=1.2.2",
-    "supabase>=2.28.3",
 ]

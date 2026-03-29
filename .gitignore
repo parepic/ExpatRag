@@ -36,3 +36,6 @@ Thumbs.db
 docs/superpowers/
 CLAUDE.md
 AGENTS.md
+
+# Data pipeline local snapshot
+data_pipeline/data/documents.jsonl

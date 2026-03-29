@@ -1,17 +1,9 @@
 """Chunk source content and store embeddings in `document_chunks`."""
 
 from __future__ import annotations
-
-import re
-from collections.abc import Iterable, Iterator
-from dataclasses import dataclass
-from typing import Any
-
-from langchain_core.documents import Document
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from supabase import Client
-
-from scheduler.core.config import (
+from lib.supabase_client import get_supabase_client
+from lib.embeddings import get_embeddings
+from lib.config import (
     CHUNK_DRY_RUN,
     CHUNK_EMBEDDING_MODEL,
     CHUNK_LIMIT,
@@ -21,8 +13,20 @@ from scheduler.core.config import (
     CHUNK_SOURCE_ID,
     CHUNK_DB_BATCH_SIZE,
 )
-from scheduler.core.embeddings import get_embeddings
-from scheduler.core.supabase_client import get_supabase_client
+from supabase import Client
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_core.documents import Document
+from typing import Any
+from dataclasses import dataclass
+from collections.abc import Iterable, Iterator
+import re
+
+import sys
+from pathlib import Path
+
+_pipeline_root = Path(__file__).resolve().parent.parent
+if str(_pipeline_root) not in sys.path:
+    sys.path.insert(0, str(_pipeline_root))
 
 
 @dataclass(slots=True)
@@ -37,7 +41,7 @@ class ChunkStats:
 def batched(items: list[dict[str, Any]], batch_size: int = CHUNK_DB_BATCH_SIZE) -> Iterator[list[dict[str, Any]]]:
     """Yield lists in database-friendly batch sizes."""
     for start in range(0, len(items), batch_size):
-        yield items[start : start + batch_size]
+        yield items[start: start + batch_size]
 
 
 def iter_sources(
@@ -178,7 +182,8 @@ def build_chunk_payloads(
 
 def replace_source_chunks(supabase: Client, source_id: str, payloads: list[dict[str, Any]]) -> None:
     """Replace all chunks for one source with freshly generated chunk rows."""
-    supabase.table("document_chunks").delete().eq("source_id", source_id).execute()
+    supabase.table("document_chunks").delete().eq(
+        "source_id", source_id).execute()
     for batch in batched(payloads):
         supabase.table("document_chunks").insert(batch).execute()
 
@@ -231,7 +236,8 @@ def chunk_sources(
         split_documents = splitter.split_documents([source_document])
         if not split_documents:
             stats.sources_skipped += 1
-            print(f"Skipping source {source['id']}: chunk splitter returned no chunks")
+            print(
+                f"Skipping source {source['id']}: chunk splitter returned no chunks")
             continue
 
         if dry_run:
@@ -260,7 +266,7 @@ def chunk_sources(
 
 
 def main() -> None:
-    """Run the chunking task using values from scheduler config."""
+    """Run the chunking task using values from config."""
     stats = chunk_sources()
 
     if CHUNK_DRY_RUN:

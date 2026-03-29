@@ -4,7 +4,7 @@ A RAG-powered legal and compliance assistant for expats and small businesses in 
 
 ## Key Features
 
-- **Up-to-date document pipeline** — Scheduled scraper that pulls the latest Dutch and English documentation from IND, Rijksoverheid, and Belastingdienst
+- **Data pipeline** — Walks the IND.nl English HTML sitemap, fetches pages via [scrape.do](https://scrape.do), extracts main text with Unstructured, writes a JSONL snapshot to `data_pipeline/data/documents.jsonl`, upserts into Supabase `sources`, then chunks and embeds into `document_chunks` (OpenAI). Use `just pipeline-full` for the full flow, `just ingest` for ingest by web scraping, `just ingest-from-jsonl` to load from JSONL into `sources`, or `just chunk-pages` for chunking only.
 - **RAG-based Q&A** — User questions are embedded, matched against retrieved legal chunks, and answered by an LLM
 - **Citation engine** — Every answer includes direct hyperlinks to the source paragraph on the government website, preventing hallucinated legal advice
 - **Bilingual** — Handles both Dutch and English government content
@@ -21,13 +21,14 @@ A RAG-powered legal and compliance assistant for expats and small businesses in 
 ## Project Structure
 
 ```
-backend/    → FastAPI API server (auth, users, chats)
-frontend/   → Next.js web app (onboarding, chat, settings)
-scheduler/  → Data ingestion pipeline (save pages, chunk, embed)
+
+backend/        → FastAPI API server
+frontend/       → Next.js web app
+data_pipeline/  → scrape / extract → Supabase + chunking
 supabase/   → Local Supabase config + SQL migrations
 ```
 
-All Python packages are managed as a [uv workspace](https://docs.astral.sh/uv/concepts/workspaces/) from the repo root. Each service (`backend/`, `scheduler/`) has its own `pyproject.toml` declaring its dependencies, but they share a single `.venv` and `uv.lock` at the root.
+All Python packages are managed as a [uv workspace](https://docs.astral.sh/uv/concepts/workspaces/) from the repo root. Each package (`backend/`, `data_pipeline/`) has its own `pyproject.toml`, sharing a single `.venv` and `uv.lock` at the root.
 
 ## Setup
 
@@ -64,7 +65,8 @@ Use values from `npx supabase status`:
 ```env
 SUPABASE_API_URL=http://127.0.0.1:54321
 SUPABASE_SERVICE_KEY=<service_role_key_from_supabase_status> (starts with sb_secret)
-OPENAI_API_KEY=<your_openai_key> ()
+OPENAI_API_KEY=<your_openai_key>
+SCRAPE_DO_TOKEN=<your_scrape_do_token> (optional: should be set if you want to use the web scraper)
 ```
 
 Notes:
@@ -82,15 +84,16 @@ just backend
 # terminal 2
 just frontend
 
-# terminal 3 (pipeline)
-just scheduler
+# terminal 3 (pipeline: scrape → JSONL → store → chunk)
+just pipeline-full
 ```
 
-Additional scheduler commands:
+Additional pipeline commands:
 
 ```bash
-just save-pages
-just chunk-pages
+just ingest       # ingest only (scrape → JSONL → store)
+just ingest-from-jsonl  # JSONL → store (no HTTP)
+just chunk-pages        # chunk only
 ```
 
 ## Running (Manual Commands — Alternative to just)
@@ -103,16 +106,21 @@ From the repo root:
 npx supabase start
 uv run --package backend fastapi dev backend/app/main.py
 cd frontend && pnpm dev
-uv run --package scheduler python3 -m scheduler.tasks.pipeline
+uv run --package data-pipeline python3 data_pipeline/pipeline.py
 ```
 
-Scheduler stages can also run individually:
+Ingest only:
 
 ```bash
-uv run --package scheduler python3 -m scheduler.tasks.save_page
-uv run --package scheduler python3 -m scheduler.tasks.chunk
+uv run --package data-pipeline python3 data_pipeline/ingest.py
+uv run --package data-pipeline python3 data_pipeline/ingest.py --skip-data-fetch
 ```
 
+Chunking only:
+
+```bash
+uv run --package data-pipeline python3 data_pipeline/chunk.py
+```
 
 ## Supabase (Useful urls)
 
@@ -137,7 +145,5 @@ npx supabase status
 # create .env using the values above
 just backend
 just frontend
-just scheduler
+just pipeline-full
 ```
-
-Run backend, frontend, and scheduler in separate terminal sessions.
