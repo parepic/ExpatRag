@@ -5,9 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.core.supabase_client import supabase
 from app.dependencies.auth import get_current_user
 from app.schemas.chat import AddMessageRequest, CreateChatRequest
-from app.services.chat_service import (
-    add_message_with_dummy_reply,
-    create_chat_with_dummy_reply,
+from app.services.conversation_service import (
+    add_chat_message,
+    create_chat as create_chat_record,
 )
 
 router = APIRouter(prefix="/chats")
@@ -69,20 +69,20 @@ def delete_chat(chat_id: str, user: dict = Depends(get_current_user)):
 
 
 @router.post("", status_code=201)
-def create_chat(
+def create_chat_endpoint(
     body: CreateChatRequest,
     user: dict = Depends(get_current_user),
 ):
-    return create_chat_with_dummy_reply(user_id=user["id"], message=body.message)
+    return create_chat_record(user_id=user["id"], message=body.message)
 
 
 @router.post("/{chat_id}/messages")
-def add_message_to_chat(
+def add_message_to_chat_endpoint(
     chat_id: str,
     body: AddMessageRequest,
     user: dict = Depends(get_current_user),
 ):
-    return add_message_with_dummy_reply(
+    return add_chat_message(
         user_id=user["id"],
         chat_id=chat_id,
         message=body.message,
