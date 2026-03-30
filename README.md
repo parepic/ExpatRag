@@ -66,12 +66,16 @@ Use values from `npx supabase status`:
 SUPABASE_API_URL=http://127.0.0.1:54321
 SUPABASE_SERVICE_KEY=<service_role_key_from_supabase_status> (starts with sb_secret)
 OPENAI_API_KEY=<your_openai_key>
+LANGSMITH_API_KEY=<your_langsmith_key> (optional: enables LangChain tracing)
+LANGSMITH_TRACING=true
+LANGSMITH_PROJECT=expatrag
 SCRAPE_DO_TOKEN=<your_scrape_do_token> (optional: should be set if you want to use the web scraper)
 ```
 
 Notes:
 
 - For local Supabase, the `SUPABASE_SERVICE_KEY` should be in the terminal after starting supabase.
+- If LangSmith variables are set, backend and pipeline LangChain calls will be traced automatically.
 
 ### 3) Run app services (recommended with just)
 

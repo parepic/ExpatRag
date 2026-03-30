@@ -8,6 +8,7 @@ from functools import lru_cache
 from dotenv import load_dotenv
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langsmith import traceable
 from pydantic import BaseModel, Field
 
 from app.core.config import EMBEDDING_MODEL, LLM_MODEL, RAG_MATCH_COUNT, RAG_MATCH_THRESHOLD
@@ -49,6 +50,7 @@ def _get_llm() -> ChatOpenAI:
 # ---------------------------------------------------------------------------
 
 
+@traceable(run_type="retriever", name="context_retrieval")
 def retrieve_chunks(question: str) -> list[dict]:
     """Return the top-k most relevant document chunks for *question*."""
     embedding_vector = _get_embeddings().embed_query(question)
@@ -150,7 +152,20 @@ def generate_rag_reply(
         *citations* is a list of dicts carrying source metadata for storage in
         the ``messages.citations`` JSONB column.
     """
-    chunks = retrieve_chunks(question)
+    chunks = retrieve_chunks(
+        question,
+        langsmith_extra={
+            "tags": ["expatrag", "backend", "retrieval", "supabase"],
+            "metadata": {
+                "user_id": user_id,
+                "embedding_model": EMBEDDING_MODEL,
+                "match_function": "match_document_chunks",
+                "rag_match_count": RAG_MATCH_COUNT,
+                "rag_match_threshold": RAG_MATCH_THRESHOLD,
+                "question_char_count": len(question),
+            },
+        },
+    )
     context = _build_context(chunks)
     user_profile = _load_user_profile(user_id)
     user_profile_text = _format_user_profile(user_profile)
@@ -159,7 +174,17 @@ def generate_rag_reply(
 
     lc_history = _build_chat_history(chat_history or [])
 
-    chain = RAG_PROMPT | _get_llm().with_structured_output(RAGAnswer)
+    chain = (RAG_PROMPT | _get_llm().with_structured_output(RAGAnswer)).with_config(
+        {
+            "run_name": "expatrag_rag_reply",
+            "tags": ["expatrag", "backend", "rag"],
+            "metadata": {
+                "llm_model": LLM_MODEL,
+                "embedding_model": EMBEDDING_MODEL,
+                "rag_match_count": RAG_MATCH_COUNT,
+            },
+        }
+    )
     response: RAGAnswer = chain.invoke(
         {
             "context": context,
@@ -169,9 +194,15 @@ def generate_rag_reply(
             "candidate_chunk_refs": ", ".join(str(chunk_ref) for chunk_ref in candidate_chunk_refs)
             if candidate_chunk_refs
             else "none",
-        }
+        },
+        config={
+            "metadata": {
+                "user_id": user_id,
+                "question_char_count": len(question),
+                "retrieved_chunk_count": len(chunks),
+            }
+        },
     )
-    print(response)
     reply_text = response.answer.strip()
     valid_used_chunk_refs = [
         chunk_ref
