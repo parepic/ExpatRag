@@ -49,6 +49,7 @@ def _get_llm() -> ChatOpenAI:
 # Retrieval
 # ---------------------------------------------------------------------------
 
+# Add Hybrid Search and Keyword Search here.
 
 @traceable(run_type="retriever", name="context_retrieval")
 def retrieve_chunks(question: str) -> list[dict]:
