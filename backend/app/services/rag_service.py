@@ -4,10 +4,8 @@ from __future__ import annotations
 
 import os
 from functools import lru_cache
-from typing import Callable
-
 from dotenv import load_dotenv
-from typing import List
+from typing import List, Callable
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langsmith import traceable
