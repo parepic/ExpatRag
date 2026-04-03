@@ -4,19 +4,22 @@ from __future__ import annotations
 
 import os
 from functools import lru_cache
-
 from dotenv import load_dotenv
-from langchain_core.messages import AIMessage, HumanMessage
+from typing import List, Callable
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langsmith import traceable
 from pydantic import BaseModel, Field
 
-from app.core.config import EMBEDDING_MODEL, LLM_MODEL, RAG_MATCH_COUNT, RAG_MATCH_THRESHOLD
+from app.core.config import EMBEDDING_MODEL, LLM_MODEL, RAG_MATCH_COUNT, RAG_MATCH_THRESHOLD, SEARCH_STRATEGY
 from app.core.prompts import RAG_PROMPT
 from app.core.supabase_client import supabase
+from app.services.rag_utils import reciprocal_rank_fusion
 
 load_dotenv()
 
+class QueryVariations(BaseModel):
+    variations: List[str]=Field(..., description="Query variations generated for Multi Query Search")
 
 class RAGAnswer(BaseModel):
     answer: str = Field(description="Final answer to show to the user")
@@ -49,10 +52,11 @@ def _get_llm() -> ChatOpenAI:
 # Retrieval
 # ---------------------------------------------------------------------------
 
+# Add Hybrid Search and Keyword Search here.
 
-@traceable(run_type="retriever", name="context_retrieval")
-def retrieve_chunks(question: str) -> list[dict]:
-    """Return the top-k most relevant document chunks for *question*."""
+@traceable(run_type="retriever", name="vector_search_retrieval")
+def vector_search(question: str) -> list[dict]:
+    """Return the top-k most relevant document chunks for *question* using VECTOR SEARCH"""
     embedding_vector = _get_embeddings().embed_query(question)
 
     result = supabase.rpc(
@@ -66,6 +70,87 @@ def retrieve_chunks(question: str) -> list[dict]:
 
     return result.data or []
 
+
+@traceable(run_type="retriever", name="keyword_search_retrieval")
+def _keyword_search(question: str) -> list[dict]:
+    """Return the top-k most relevant document chunks for *question* using KEYWORD SEARCH"""
+    result = supabase.rpc(
+        "keyword_search_document_chunks",
+        {
+            "query_text": question,
+            "match_count": RAG_MATCH_COUNT,
+        },
+    ).execute()
+
+    return result.data or []
+
+@traceable(run_type="retriever", name="hybrid_search_retrieval")
+def hybrid_search(question: str) -> list[dict]:
+    vector_search_results = vector_search(question)
+    keyword_search_results = _keyword_search(question)
+
+    return reciprocal_rank_fusion([vector_search_results, keyword_search_results])
+
+@traceable(run_type="retriever", name="multi_query_vector_search_retrieval")
+def multi_query_vector_search(question: str) -> list[dict]:
+    queries = _generate_query_variations(question)
+    all_results = []
+    for i, query in enumerate(queries):
+        results = vector_search(query)
+        print(f"Query {i+1}: {query}\nReturned {len(results)} chunks\n\n")
+        all_results.append(results)
+    return reciprocal_rank_fusion(all_results)
+
+@traceable(run_type="retriever", name="multi_query_hybrid_search_retrieval")
+def multi_query_hybrid_search(question: str) -> list[dict]:
+    queries = _generate_query_variations(question)
+    all_results = []
+    for i, query in enumerate(queries):
+        results = hybrid_search(query)
+        print(f"Query {i+1}: {query}\nReturned {len(results)} chunks\n\n")
+        all_results.append(results)
+    return reciprocal_rank_fusion(all_results)
+
+
+def _get_retrieval_function(strategy: str) -> Callable[[str], list[dict]]:
+    strategy_to_function: dict[str, Callable[[str], list[dict]]] = {
+        "basic": vector_search,
+        "hybrid": hybrid_search,
+        "multi-query-vector": multi_query_vector_search,
+        "multi-query-hybrid": multi_query_hybrid_search,
+    }
+    normalized_strategy = strategy.strip().lower()
+    retrieval_function = strategy_to_function.get(normalized_strategy)
+    if retrieval_function is None:
+        valid_strategies = ", ".join(sorted(strategy_to_function.keys()))
+        raise ValueError(
+            f"Unsupported retrieval strategy '{strategy}'. Valid options: {valid_strategies}"
+        )
+    return retrieval_function
+
+
+
+@traceable(run_type="retriever", name="generate_query_variations")
+def _generate_query_variations(user_query: str, num_queries: int = 3) -> list[str]:
+    """
+        Take the original query and make multiple variations of it. Used in multi query search strategies.
+    """
+    system_prompt = f"""Generate {num_queries-1} alternative ways to phrase this questions for document search. Use different keywords and synonyms while maintaining the same intent. Return exactly {num_queries-1} variations."""
+
+    try:
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=f"Original query: {user_query}")
+        ]
+        structured_llm = _get_llm().with_structured_output(QueryVariations)
+        result: QueryVariations = structured_llm.invoke(messages)
+        return [user_query, *result.variations][:num_queries]
+    
+    except Exception as e:
+        print(f"Cannot generate query variations. Reason: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return [user_query]
 
 # ---------------------------------------------------------------------------
 # Generation
@@ -152,14 +237,17 @@ def generate_rag_reply(
         *citations* is a list of dicts carrying source metadata for storage in
         the ``messages.citations`` JSONB column.
     """
-    chunks = retrieve_chunks(
+
+    
+    retrieval_function = _get_retrieval_function(SEARCH_STRATEGY)
+    chunks = retrieval_function(
         question,
         langsmith_extra={
             "tags": ["expatrag", "backend", "retrieval", "supabase"],
             "metadata": {
                 "user_id": user_id,
                 "embedding_model": EMBEDDING_MODEL,
-                "match_function": "match_document_chunks",
+                "retrieval_strategy": retrieval_function,
                 "rag_match_count": RAG_MATCH_COUNT,
                 "rag_match_threshold": RAG_MATCH_THRESHOLD,
                 "question_char_count": len(question),
