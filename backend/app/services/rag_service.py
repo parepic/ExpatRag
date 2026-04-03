@@ -54,7 +54,7 @@ def _get_llm() -> ChatOpenAI:
 
 # Add Hybrid Search and Keyword Search here.
 
-@traceable(run_type="retriever", name="context_retrieval")
+@traceable(run_type="retriever", name="vector_search_retrieval")
 def vector_search(question: str) -> list[dict]:
     """Return the top-k most relevant document chunks for *question* using VECTOR SEARCH"""
     embedding_vector = _get_embeddings().embed_query(question)
@@ -71,7 +71,7 @@ def vector_search(question: str) -> list[dict]:
     return result.data or []
 
 
-@traceable(run_type="retriever", name="context_retrieval")
+@traceable(run_type="retriever", name="keyword_search_retrieval")
 def _keyword_search(question: str) -> list[dict]:
     """Return the top-k most relevant document chunks for *question* using KEYWORD SEARCH"""
     result = supabase.rpc(
@@ -84,14 +84,14 @@ def _keyword_search(question: str) -> list[dict]:
 
     return result.data or []
 
-@traceable(run_type="retriever", name="context_retrieval")
+@traceable(run_type="retriever", name="hybrid_search_retrieval")
 def hybrid_search(question: str) -> list[dict]:
     vector_search_results = vector_search(question)
     keyword_search_results = _keyword_search(question)
 
     return reciprocal_rank_fusion([vector_search_results, keyword_search_results])
 
-@traceable(run_type="retriever", name="context_retrieval")
+@traceable(run_type="retriever", name="multi_query_vector_search_retrieval")
 def multi_query_vector_search(question: str) -> list[dict]:
     queries = _generate_query_variations(question)
     all_results = []
@@ -101,7 +101,7 @@ def multi_query_vector_search(question: str) -> list[dict]:
         all_results.append(results)
     return reciprocal_rank_fusion(all_results)
 
-@traceable(run_type="retriever", name="context_retrieval")
+@traceable(run_type="retriever", name="multi_query_hybrid_search_retrieval")
 def multi_query_hybrid_search(question: str) -> list[dict]:
     queries = _generate_query_variations(question)
     all_results = []
@@ -130,7 +130,7 @@ def _get_retrieval_function(strategy: str) -> Callable[[str], list[dict]]:
 
 
 
-@traceable(run_type="retriever", name="context_retrieval")
+@traceable(run_type="retriever", name="generate_query_variations")
 def _generate_query_variations(user_query: str, num_queries: int = 3) -> list[str]:
     """
         Take the original query and make multiple variations of it. Used in multi query search strategies.
