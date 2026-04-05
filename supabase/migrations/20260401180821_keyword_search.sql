@@ -12,7 +12,7 @@ RETURNS TABLE(
     page_number      INTEGER,
     metadata         JSONB,
     source_title     TEXT,
-    source_url       TEXT,
+    source_url       TEXT
 )
 LANGUAGE sql STABLE
 AS $$
@@ -24,7 +24,7 @@ SELECT
     dc.page_number,
     dc.metadata,
     s.title       AS source_title,
-    s.source_url  AS source_url,
+    s.source_url  AS source_url
 FROM
     document_chunks dc
 LEFT JOIN 
