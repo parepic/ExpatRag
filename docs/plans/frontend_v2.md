@@ -134,7 +134,7 @@ Each feature has its own spec and implementation plan. They are organized by the
 
 Set up the project before building any features:
 
-1. Initialize Next.js project in `patty_frontend/` with TypeScript, Tailwind v4, App Router, pnpm
+1. Initialize Next.js project in `patty_frontend/` with TypeScript, Tailwind v4, App Router, pnpm. Set the package name to `frontend` (not `patty_frontend`) so no config changes are needed when the directory is renamed later.
 2. Configure Turbopack, path aliases, PostCSS
 3. Initialize shadcn/ui (`npx shadcn init`) — this sets up the CLI config, `cn()` utility, and base styles. Do not install any components yet; they will be added on demand as each feature needs them (e.g. `npx shadcn add button`).
 4. Create fresh global styles, theme tokens, and base UI plumbing in `patty_frontend/`, using `frontend/` only as reference where needed
@@ -146,9 +146,10 @@ Set up the project before building any features:
 
 Each feature is specced and built in its own file (see table above). Steps will be added here as we write each spec.
 
-### Final step: Verify
+### Final step: Verify and rename
 
-Run a full `pnpm build` to confirm there are no type errors or broken imports across the project.
+1. Run a full `pnpm build` to confirm there are no type errors or broken imports across the project.
+2. Delete the old `frontend/` directory and rename `patty_frontend/` to `frontend/`. The project should work without any code changes after the rename — ensure nothing in the codebase (package.json name, paths, configs) hardcodes the `patty_frontend` name.
 
 ---
 
