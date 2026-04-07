@@ -136,9 +136,9 @@ Set up the project before building any features:
 
 1. Initialize Next.js project in `patty_frontend/` with TypeScript, Tailwind v4, App Router, pnpm
 2. Configure Turbopack, path aliases, PostCSS
-3. Install shared dependencies: shadcn/ui
-4. Copy over `globals.css` theme variables and shadcn/ui primitives from `frontend/`
-5. Copy over `src/lib/constants/` (nationality options, salary bands, etc. — these are unchanged)
+3. Initialize shadcn/ui (`npx shadcn init`) — this sets up the CLI config, `cn()` utility, and base styles. Do not install any components yet; they will be added on demand as each feature needs them (e.g. `npx shadcn add button`).
+4. Create fresh global styles, theme tokens, and base UI plumbing in `patty_frontend/`, using `frontend/` only as reference where needed
+5. Recreate the required constants in `src/lib/constants/` from scratch
 6. Set up the route structure (empty page shells for `/`, `/login`, `/onboarding`, `/chat`, `/settings/profile`)
 7. Verify `pnpm dev` and `pnpm build` work
 
@@ -146,9 +146,9 @@ Set up the project before building any features:
 
 Each feature is specced and built in its own file (see table above). Steps will be added here as we write each spec.
 
-### Final step: Prune unused components
+### Final step: Verify
 
-After all features are built, check imports across the project and remove any shadcn/ui components that aren't actually used. They can always be reinstalled later with `npx shadcn add <component>`.
+Run a full `pnpm build` to confirm there are no type errors or broken imports across the project.
 
 ---
 
