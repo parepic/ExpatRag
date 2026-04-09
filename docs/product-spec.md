@@ -47,6 +47,7 @@ How the app behaves. This is the single source of truth for product-level rules 
 - The welcome page is the first thing new visitors see. It must clearly communicate: who the app is for (expats in the Netherlands), what it does (AI-powered legal/compliance Q&A), and why it's valuable (cited answers, personalized, saves time).
 - The page includes an animated background (simulated chat conversations) to visually demonstrate the app in action.
 - A clear call-to-action directs users to sign up.
+- TODO: Header on public pages linking to "contact us" page and the like.
 
 
 

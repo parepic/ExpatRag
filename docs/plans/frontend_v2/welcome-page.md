@@ -73,10 +73,10 @@ Create `src/components/welcome/AnimatedChat.tsx` — a client component (`"use c
 Create `src/app/page.tsx` as a Client Component (`"use client"`).
 
 **Auth redirect check:**
-- On mount, call the backend `GET /auth/me` endpoint (use `fetch` with `credentials: "include"` to send the session cookie).
-- If the response is 200 (user is logged in), redirect to `/chat` using `useRouter().push("/chat")`.
-- If the response is 401 or fails, the user is not logged in — render the welcome page.
-- While checking, render nothing (`return null`) to avoid a flash of content.
+- Use the `useAuth` hook created in Step 1.
+- While `isLoading` is true, render nothing (`return null`) to avoid a flash of content.
+- If `user` is non-null (logged in), redirect to `/chat` using `useRouter().push("/chat")`.
+- If `user` is null and loading is done, render the welcome page.
 
 **Layout (top to bottom):**
 

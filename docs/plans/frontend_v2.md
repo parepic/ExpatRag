@@ -142,9 +142,41 @@ Set up the project before building any features:
 6. Set up the route structure (empty page shells for `/`, `/login`, `/onboarding`, `/chat`, `/settings/profile`)
 7. Verify `pnpm dev` and `pnpm build` work
 
-### Step 1–5: Feature implementation
+### Step 1: `useAuth` hook
 
-Each feature is specced and built in its own file (see table above). Steps will be added here as we write each spec.
+Create `src/hooks/useAuth.ts` — a shared hook that checks the user's authentication status by calling the backend. Needed by the welcome page (Step 2) and later by `AuthContext` (Step 4).
+
+**Behaviour:**
+- On mount, call `GET /auth/me` with `credentials: "include"` to send the session cookie.
+- Return `{ user, isLoading }`:
+  - While the request is in flight: `{ user: null, isLoading: true }`
+  - If 200: `{ user: <response body>, isLoading: false }`
+  - If 401 or network error: `{ user: null, isLoading: false }`
+- This hook is intentionally minimal — it does not redirect or provide context. Redirects are the caller's responsibility. `AuthContext` (built later) will wrap this hook for protected routes.
+
+### Step 2: Welcome page (`/`)
+
+Spec: [welcome-page.md](frontend_v2/welcome-page.md)
+
+### Step 3: Login & registration (`/login`)
+
+Spec: [login-page.md](frontend_v2/login-page.md)
+
+### Step 4: `AuthContext` provider
+
+Create `src/context/AuthContext.tsx` — wraps `useAuth` and provides the user via React context. Used by the `(auth)/layout.tsx` route group to protect all authenticated routes. Redirects to `/login` on 401. Must be built before onboarding and chat, which live inside the `(auth)` group.
+
+### Step 5: Onboarding flow (`/onboarding`)
+
+Spec: [onboarding.md](frontend_v2/onboarding.md)
+
+### Step 6: Chat interface (`/chat`)
+
+Spec: [chat.md](frontend_v2/chat.md)
+
+### Step 7: Settings & profile (`/settings/profile`)
+
+Spec: [settings-profile.md](frontend_v2/settings-profile.md)
 
 ### Final step: Verify and rename
 
