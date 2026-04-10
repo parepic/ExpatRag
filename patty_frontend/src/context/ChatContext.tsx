@@ -9,18 +9,25 @@ import {
   type SetStateAction,
 } from "react";
 
+import type { Chat } from "@/lib/types/chat";
+
 type ChatContextValue = {
   activeChatId: string | null;
+  chats: Chat[];
   setActiveChatId: Dispatch<SetStateAction<string | null>>;
+  setChats: Dispatch<SetStateAction<Chat[]>>;
 };
 
 const ChatContext = createContext<ChatContextValue | null>(null);
 
 export function ChatProvider({ children }: { children: ReactNode }) {
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [chats, setChats] = useState<Chat[]>([]);
 
   return (
-    <ChatContext.Provider value={{ activeChatId, setActiveChatId }}>
+    <ChatContext.Provider
+      value={{ activeChatId, chats, setActiveChatId, setChats }}
+    >
       {children}
     </ChatContext.Provider>
   );

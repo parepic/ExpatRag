@@ -6,16 +6,53 @@ import { ChatWelcome } from "@/components/chat/ChatWelcome";
 import { Composer } from "@/components/chat/Composer";
 import { MessageList } from "@/components/chat/MessageList";
 import { useChatContext } from "@/context/ChatContext";
-import { addMessage, createChat, fetchChat } from "@/lib/api/chats";
-import type { Message } from "@/lib/types/chat";
+import { addMessage, createChat, fetchChat, fetchChats } from "@/lib/api/chats";
+import type { Chat, Message } from "@/lib/types/chat";
+
+function truncateTitle(title: string, maxLength: number) {
+  if (title.length <= maxLength) {
+    return title;
+  }
+
+  return `${title.slice(0, maxLength - 3)}...`;
+}
 
 export default function ChatPage() {
-  const { activeChatId, setActiveChatId } = useChatContext();
+  const { activeChatId, chats, setActiveChatId, setChats } = useChatContext();
   const skipNextLoadChatIdRef = useRef<string | null>(null);
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const activeChat = chats.find((chat) => chat.id === activeChatId) ?? null;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadChats() {
+      try {
+        const fetchedChats = await fetchChats();
+
+        if (!cancelled) {
+          setChats(fetchedChats);
+        }
+      } catch (caughtError) {
+        if (!cancelled) {
+          setError(
+            caughtError instanceof Error
+              ? caughtError.message
+              : "Failed to load chats",
+          );
+        }
+      }
+    }
+
+    void loadChats();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [setChats]);
 
   useEffect(() => {
     if (!activeChatId) {
@@ -86,8 +123,14 @@ export default function ChatPage() {
     try {
       if (!activeChatId) {
         const reply = await createChat(draft);
+        const nextChat: Chat = {
+          id: reply.chat_id,
+          title: draft.slice(0, 60),
+          created_at: optimisticMessage.created_at,
+        };
 
         skipNextLoadChatIdRef.current = reply.chat_id;
+        setChats((current) => [nextChat, ...current.filter((chat) => chat.id !== nextChat.id)]);
         setActiveChatId(reply.chat_id);
         setMessages((current) => [...current, reply.assistant_message]);
       } else {
@@ -122,7 +165,9 @@ export default function ChatPage() {
       <div className="mx-auto flex w-full max-w-4xl flex-1 min-h-0 flex-col gap-4">
         <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
           <p className="text-sm text-muted-foreground">
-            Active chat: {activeChatId ?? "new conversation"}
+            {activeChat
+              ? truncateTitle(activeChat.title, 48)
+              : activeChatId ?? "new conversation"}
           </p>
           {error ? (
             <p className="mt-2 text-sm text-destructive">{error}</p>

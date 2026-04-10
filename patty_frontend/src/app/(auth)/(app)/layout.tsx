@@ -16,11 +16,13 @@ type Breadcrumb = {
   muted: boolean;
 };
 
-const PLACEHOLDER_CHATS = [
-  { id: "chat-1", title: "30% ruling questions" },
-  { id: "chat-2", title: "Registering at the gemeente" },
-  { id: "chat-3", title: "Finding housing in Utrecht" },
-];
+function truncateTitle(title: string, maxLength: number) {
+  if (title.length <= maxLength) {
+    return title;
+  }
+
+  return `${title.slice(0, maxLength - 3)}...`;
+}
 
 function isSettingsRoute(pathname: string) {
   return pathname.startsWith("/settings");
@@ -51,7 +53,7 @@ function AppShell({ children }: AppLayoutProps) {
   const pathname = usePathname();
   const inSettings = isSettingsRoute(pathname);
   const breadcrumbs = getBreadcrumbs(pathname);
-  const { activeChatId, setActiveChatId } = useChatContext();
+  const { activeChatId, chats, setActiveChatId } = useChatContext();
 
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
@@ -115,28 +117,30 @@ function AppShell({ children }: AppLayoutProps) {
               </Button>
             </div>
 
-            <p className="mb-2 px-2 text-xs italic text-muted-foreground">
-              Placeholder history for now
-            </p>
-
-            <ul className="space-y-0.5">
-              {PLACEHOLDER_CHATS.map((chat) => (
-                <li key={chat.id}>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setActiveChatId(chat.id)}
+            {chats.length === 0 ? (
+              <p className="px-2 text-xs text-muted-foreground">
+                No chats yet.
+              </p>
+            ) : (
+              <ul className="space-y-0.5">
+                {chats.map((chat) => (
+                  <li key={chat.id}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setActiveChatId(chat.id)}
                     className={`w-full justify-start truncate px-2 py-1.5 text-sm shadow-none transition-colors ${
                       activeChatId === chat.id
                         ? "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary hover:text-sidebar-primary-foreground"
                         : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     }`}
                   >
-                    {chat.title}
-                  </Button>
-                </li>
-              ))}
-            </ul>
+                      {truncateTitle(chat.title, 30)}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         ) : (
           <div className="flex-1" />

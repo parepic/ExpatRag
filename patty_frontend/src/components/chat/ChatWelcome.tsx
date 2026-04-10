@@ -16,9 +16,9 @@ export function ChatWelcome({ onSuggestionClick }: ChatWelcomeProps) {
   return (
     <div className="flex h-full flex-col items-center justify-center px-6 py-10 text-center">
       <div className="max-w-2xl">
-        <p className="text-sm text-muted-foreground">
+        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
           Start a new conversation with Patty
-        </p>
+        </h1>
       </div>
 
       <div className="mt-6 grid w-full max-w-2xl gap-2 sm:grid-cols-2">
