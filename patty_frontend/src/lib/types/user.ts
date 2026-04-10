@@ -12,10 +12,7 @@ type EmploymentStatus = (typeof EMPLOYMENT_STATUS_OPTIONS)[number];
 type RegistrationStatus = (typeof REGISTRATION_STATUS_OPTIONS)[number];
 type SalaryBand = (typeof SALARY_BANDS)[number];
 
-export type User = {
-  id: string;
-  username: string;
-  created_at: string;
+export type UserProfile = {
   nationality: Nationality | null;
   purpose_of_stay: PurposeOfStay | null;
   employment_status: EmploymentStatus | null;
@@ -25,3 +22,11 @@ export type User = {
   age_bracket_under_30: boolean | null;
   prior_nl_residency: boolean | null;
 };
+
+export type AuthUser = {
+  id: string;
+  username: string;
+  created_at: string;
+} & UserProfile;
+
+export type UserProfileKey = keyof UserProfile;

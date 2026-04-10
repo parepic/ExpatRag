@@ -11,10 +11,10 @@ import { QuestionCard } from "@/components/onboarding/QuestionCard";
 import { YesNoToggle } from "@/components/onboarding/YesNoToggle";
 import { updateUser } from "@/lib/api/users";
 import { ONBOARDING_QUESTIONS } from "@/lib/onboarding/questions";
-import type { User } from "@/lib/types/user";
+import type { UserProfile } from "@/lib/types/user";
 
 type OnboardingAnswerKey = (typeof ONBOARDING_QUESTIONS)[number]["key"];
-type OnboardingAnswers = Partial<Pick<User, OnboardingAnswerKey>>;
+type OnboardingAnswers = Partial<Pick<UserProfile, OnboardingAnswerKey>>;
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -156,12 +156,22 @@ export default function OnboardingPage() {
                 <ChipSelect
                   options={currentQuestion.options ?? []}
                   value={(answers[currentQuestion.key] as string | null) ?? null}
-                  onChange={(value) => setAnswer(currentQuestion.key, value)}
+                  onChange={(value) =>
+                    setAnswer(
+                      currentQuestion.key,
+                      value as OnboardingAnswers[typeof currentQuestion.key],
+                    )
+                  }
                 />
               ) : (
                 <YesNoToggle
                   value={(answers[currentQuestion.key] as boolean | null) ?? null}
-                  onChange={(value) => setAnswer(currentQuestion.key, value)}
+                  onChange={(value) =>
+                    setAnswer(
+                      currentQuestion.key,
+                      value as OnboardingAnswers[typeof currentQuestion.key],
+                    )
+                  }
                 />
               )}
 

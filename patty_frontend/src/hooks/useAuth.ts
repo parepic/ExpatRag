@@ -2,17 +2,17 @@
 
 import { useEffect, useState } from "react";
 
-import type { User } from "@/lib/types/user";
+import type { AuthUser } from "@/lib/types/user";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 interface UseAuthResult {
-  user: User | null;
+  user: AuthUser | null;
   isLoading: boolean;
 }
 
 export function useAuth(): UseAuthResult {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -32,7 +32,7 @@ export function useAuth(): UseAuthResult {
           return;
         }
 
-        const data = (await response.json()) as User;
+        const data = (await response.json()) as AuthUser;
 
         if (!isCancelled) {
           setUser(data);

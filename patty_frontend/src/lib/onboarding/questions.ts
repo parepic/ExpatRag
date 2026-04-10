@@ -1,4 +1,4 @@
-import type { User } from "@/lib/types/user";
+import type { UserProfileKey } from "@/lib/types/user";
 import {
   EMPLOYMENT_STATUS_OPTIONS,
   NATIONALITY_OPTIONS,
@@ -8,7 +8,7 @@ import {
 } from "@/lib/constants";
 
 export type OnboardingQuestion = {
-  key: keyof User;
+  key: UserProfileKey;
   label: string;
   sublabel?: string;
   type: "chip" | "yesno";
