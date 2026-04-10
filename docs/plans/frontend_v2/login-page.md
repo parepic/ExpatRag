@@ -69,7 +69,7 @@ npx shadcn@latest add input label tabs
 Create `src/lib/api/auth.ts` with two functions that call the backend auth endpoints. All functions use `credentials: "include"` so the browser sends/receives the session cookie.
 
 ```ts
-const API_BASE = process.env.NEXT_PUBLIC_API_URL;
+const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 export async function login(username: string, password: string): Promise<void> {
   const res = await fetch(`${API_BASE}/auth/login`, {
