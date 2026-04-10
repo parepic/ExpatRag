@@ -2,9 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { Composer } from "@/components/chat/Composer";
 import { MessageList } from "@/components/chat/MessageList";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useChatContext } from "@/context/ChatContext";
 import { addMessage, createChat, fetchChat } from "@/lib/api/chats";
 import type { Message } from "@/lib/types/chat";
@@ -14,7 +13,6 @@ export default function ChatPage() {
   const skipNextLoadChatIdRef = useRef<string | null>(null);
 
   const [messages, setMessages] = useState<Message[]>([]);
-  const [draft, setDraft] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -67,19 +65,16 @@ export default function ChatPage() {
     };
   }, [activeChatId]);
 
-  async function handleSend() {
-    const trimmedDraft = draft.trim();
-
-    if (!trimmedDraft || isLoading) {
+  async function handleSend(draft: string) {
+    if (!draft.trim() || isLoading) {
       return;
     }
 
     setError("");
-    setDraft("");
 
     const optimisticMessage: Message = {
       role: "user",
-      content: trimmedDraft,
+      content: draft,
       citations: null,
       created_at: new Date().toISOString(),
     };
@@ -89,13 +84,13 @@ export default function ChatPage() {
 
     try {
       if (!activeChatId) {
-        const reply = await createChat(trimmedDraft);
+        const reply = await createChat(draft);
 
         skipNextLoadChatIdRef.current = reply.chat_id;
         setActiveChatId(reply.chat_id);
         setMessages((current) => [...current, reply.assistant_message]);
       } else {
-        const reply = await addMessage(activeChatId, trimmedDraft);
+        const reply = await addMessage(activeChatId, draft);
 
         setMessages((current) => [...current, reply.assistant_message]);
       }
@@ -138,23 +133,7 @@ export default function ChatPage() {
         </div>
 
         <div className="rounded-3xl border border-border bg-card p-4 shadow-sm">
-          <form
-            className="flex items-center gap-3"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void handleSend();
-            }}
-          >
-            <Input
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-              placeholder="Ask Patty anything..."
-              disabled={isLoading}
-            />
-            <Button type="submit" disabled={isLoading || !draft.trim()}>
-              Send
-            </Button>
-          </form>
+          <Composer onSend={handleSend} disabled={isLoading} />
         </div>
       </div>
     </main>
