@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { ChatWelcome } from "@/components/chat/ChatWelcome";
 import { Composer } from "@/components/chat/Composer";
 import { MessageList } from "@/components/chat/MessageList";
 import { useChatContext } from "@/context/ChatContext";
@@ -129,7 +130,17 @@ export default function ChatPage() {
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
-          <MessageList messages={messages} isLoading={isLoading} />
+          <MessageList
+            messages={messages}
+            isLoading={isLoading}
+            emptyState={
+              <ChatWelcome
+                onSuggestionClick={(text) => {
+                  void handleSend(text);
+                }}
+              />
+            }
+          />
         </div>
 
         <div className="rounded-3xl border border-border bg-card p-4 shadow-sm">

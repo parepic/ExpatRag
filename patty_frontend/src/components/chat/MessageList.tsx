@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import type { Message } from "@/lib/types/chat";
@@ -8,9 +8,14 @@ import type { Message } from "@/lib/types/chat";
 type MessageListProps = {
   messages: Message[];
   isLoading: boolean;
+  emptyState?: ReactNode;
 };
 
-export function MessageList({ messages, isLoading }: MessageListProps) {
+export function MessageList({
+  messages,
+  isLoading,
+  emptyState,
+}: MessageListProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -29,11 +34,13 @@ export function MessageList({ messages, isLoading }: MessageListProps) {
   return (
     <div ref={containerRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
       {messages.length === 0 ? (
-        <div className="flex h-full items-center justify-center">
-          <p className="text-sm text-muted-foreground">
-            Start a new conversation with Patty
-          </p>
-        </div>
+        emptyState ?? (
+          <div className="flex h-full items-center justify-center">
+            <p className="text-sm text-muted-foreground">
+              Start a new conversation with Patty
+            </p>
+          </div>
+        )
       ) : (
         <div className="space-y-1">
           {messages.map((message) => (
