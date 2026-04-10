@@ -8,10 +8,11 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 
-import { useAuth, type AuthUser } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/useAuth";
+import type { User } from "@/lib/types/user";
 
 type AuthContextValue = {
-  user: AuthUser;
+  user: User;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);

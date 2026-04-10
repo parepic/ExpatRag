@@ -96,6 +96,8 @@ patty_frontend/
 │   │   ├── useAuth.ts                         # Calls /auth/me, returns user or null
 │   │   └── useIsMobile.tsx                    # Reactive boolean for mobile breakpoint (used by Sidebar)
 │   ├── lib/
+│   │   ├── types/
+│   │   │   └── user.ts                        # User type definition (mirrors backend API response)
 │   │   ├── api/                               # Backend API call functions (mirrors backend/app/api/)
 │   │   │   ├── auth.ts                        #   login(), register(), logout(), getMe()
 │   │   │   ├── users.ts                       #   updateUser()
@@ -148,7 +150,7 @@ Create `src/hooks/useAuth.ts` — a shared hook that checks the user's authentic
 
 **Behaviour:**
 - On mount, call `GET /auth/me` with `credentials: "include"` to send the session cookie.
-- Return `{ user, isLoading }`:
+- Return `{ user, isLoading }` where `user` is `User | null`:
   - While the request is in flight: `{ user: null, isLoading: true }`
   - If 200: `{ user: <response body>, isLoading: false }`
   - If 401 or network error: `{ user: null, isLoading: false }`
@@ -166,15 +168,24 @@ Spec: [login-page.md](frontend_v2/login-page.md)
 
 Create `src/context/AuthContext.tsx` — wraps `useAuth` and provides the user via React context. Used by the `(auth)/layout.tsx` route group to protect all authenticated routes. Redirects to `/login` on 401. Must be built before onboarding and chat, which live inside the `(auth)` group.
 
-### Step 5: Onboarding flow (`/onboarding`)
+### Step 5: `User` type
+
+Create `src/lib/types/user.ts` — the canonical type for a user, matching the backend `GET /auth/me` response shape exactly (snake_case, no conversion layer).
+
+- Fields: `id`, `username`, `created_at`, plus the 8 profile fields (`nationality`, `purpose_of_stay`, `employment_status`, `registration_status`, `has_fiscal_partner`, `salary_band`, `age_bracket_under_30`, `prior_nl_residency`).
+- Text profile fields (`nationality`, `purpose_of_stay`, `employment_status`, `registration_status`, `salary_band`) should be typed against their corresponding constants arrays so only valid values are accepted.
+- Boolean profile fields (`has_fiscal_partner`, `age_bracket_under_30`, `prior_nl_residency`) are typed as `boolean | null`.
+- All profile fields are `| null` because they start empty and get filled during onboarding.
+
+### Step 6: Onboarding flow (`/onboarding`)
 
 Spec: [onboarding.md](frontend_v2/onboarding.md)
 
-### Step 6: Chat interface (`/chat`)
+### Step 7: Chat interface (`/chat`)
 
 Spec: [chat.md](frontend_v2/chat.md)
 
-### Step 7: Settings & profile (`/settings/profile`)
+### Step 8: Settings & profile (`/settings/profile`)
 
 Spec: [settings-profile.md](frontend_v2/settings-profile.md)
 
