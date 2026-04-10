@@ -1,9 +1,10 @@
 import { ApiError } from "@/lib/api/auth";
+import type { UserProfile } from "@/lib/types/user";
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 export async function updateUser(
-  fields: Record<string, string | boolean | null>,
+  fields: Partial<UserProfile>,
 ): Promise<void> {
   const res = await fetch(`${API_BASE}/users/me`, {
     method: "PATCH",

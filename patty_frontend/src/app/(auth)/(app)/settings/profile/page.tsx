@@ -1,11 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
+import { ChipSelect } from "@/components/onboarding/ChipSelect";
+import { YesNoToggle } from "@/components/onboarding/YesNoToggle";
 import { Button } from "@/components/ui/button";
 import { useAuthContext } from "@/context/AuthContext";
+import { updateUser } from "@/lib/api/users";
 import { PROFILE_FIELDS } from "@/lib/settings/profile-fields";
-import type { AuthUser, UserProfile } from "@/lib/types/user";
+import type { AuthUser, UserProfile, UserProfileKey } from "@/lib/types/user";
 
 type ProfileDraft = Partial<UserProfile>;
 
@@ -31,9 +35,66 @@ function formatValue(value: string | boolean | null) {
 }
 
 export default function SettingsProfilePage() {
+  const router = useRouter();
   const { user } = useAuthContext();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<ProfileDraft>(() => createDraftFromUser(user));
+  const [profile, setProfile] = useState<ProfileDraft>(() => createDraftFromUser(user));
+  const [error, setError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    console.log("[settings/profile] AuthContext user changed:", user);
+  }, [user]);
+
+  useEffect(() => {
+    if (editing) {
+      return;
+    }
+
+    setProfile(createDraftFromUser(user));
+  }, [editing, user]);
+
+  function setField<K extends UserProfileKey>(key: K, value: UserProfile[K]) {
+    setDraft((current) => ({
+      ...current,
+      [key]: value,
+    }));
+  }
+
+  function handleEdit() {
+    setError("");
+    setDraft(profile);
+    setEditing(true);
+  }
+
+  function handleCancel() {
+    setError("");
+    setDraft(profile);
+    setEditing(false);
+  }
+
+  async function handleSave() {
+    setError("");
+    setIsSaving(true);
+    console.log("[settings/profile] AuthContext user before save:", user);
+
+    try {
+      await updateUser(draft);
+      setProfile(draft);
+      setEditing(false);
+      console.log("[settings/profile] Save succeeded. AuthContext user after save:", user);
+      router.refresh();
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Failed to save profile",
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   return (
     <main className="px-6 py-16">
@@ -48,28 +109,32 @@ export default function SettingsProfilePage() {
             </h1>
           </div>
 
-          <Button
-            type="button"
-            onClick={() => {
-              setDraft(createDraftFromUser(user));
-              setEditing(true);
-            }}
-          >
-            Edit
-          </Button>
+          {editing ? (
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCancel}
+                disabled={isSaving}
+              >
+                Cancel
+              </Button>
+              <Button type="button" onClick={handleSave} disabled={isSaving}>
+                {isSaving ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          ) : (
+            <Button type="button" onClick={handleEdit}>
+              Edit
+            </Button>
+          )}
         </div>
 
-        {editing ? (
-          <div className="mt-10 rounded-2xl border border-border bg-background px-4 py-3">
-            <p className="text-sm text-muted-foreground">
-              Edit mode is ready. The actual inputs come in the next step.
-            </p>
-          </div>
-        ) : null}
+        {error ? <p className="mt-6 text-sm text-destructive">{error}</p> : null}
 
         <div className="mt-10 space-y-3">
           {PROFILE_FIELDS.map((field) => {
-            const value = user[field.key];
+            const value = editing ? draft[field.key] ?? null : profile[field.key] ?? null;
 
             return (
               <div
@@ -77,9 +142,37 @@ export default function SettingsProfilePage() {
                 className="rounded-2xl border border-border bg-background px-4 py-4"
               >
                 <p className="text-sm font-medium text-foreground">{field.label}</p>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  {formatValue(value)}
-                </p>
+
+                <div className="mt-3">
+                  {editing ? (
+                    field.type === "chip" ? (
+                      <ChipSelect
+                        options={field.options ?? []}
+                        value={(value as string | null) ?? null}
+                        onChange={(nextValue) =>
+                          setField(
+                            field.key,
+                            nextValue as UserProfile[typeof field.key],
+                          )
+                        }
+                      />
+                    ) : (
+                      <YesNoToggle
+                        value={(value as boolean | null) ?? null}
+                        onChange={(nextValue) =>
+                          setField(
+                            field.key,
+                            nextValue as UserProfile[typeof field.key],
+                          )
+                        }
+                      />
+                    )
+                  ) : (
+                    <p className="text-sm leading-6 text-muted-foreground">
+                      {formatValue(value)}
+                    </p>
+                  )}
+                </div>
               </div>
             );
           })}
