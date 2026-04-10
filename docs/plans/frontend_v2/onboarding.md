@@ -51,7 +51,7 @@ Sublabels for context where needed:
 
 ### Completion
 
-- After a successful save, show a completion card with a message ("You're all set!") and a button ("Start chatting with Patty") that navigates to `/chat`.
+- After a successful save, show a completion card with a message ("You're all set!") that automatically redirects to `/chat` after 3 seconds.
 
 ### Auth-protected
 
@@ -128,7 +128,7 @@ When `completed` is true, render a simple centered card:
 
 - A heading ("You're all set!").
 - A subtitle ("We've saved your details and will use them to give you personalised advice.").
-- A button ("Start chatting with Patty") that navigates to `/chat`.
+- After 3 seconds, automatically redirect to `/chat`. No button needed.
 
 ### Step 8: Verify
 
@@ -138,5 +138,5 @@ When `completed` is true, render a simple centered card:
 - Confirm "Back" navigates to the previous question and preserves the answer.
 - Confirm "Finish" sends a single API call with all answered fields (check via `GET /auth/me`).
 - Confirm "Skip onboarding" redirects to `/chat` without any API call.
-- Confirm the completion screen appears after finishing.
+- Confirm the completion screen appears after finishing and auto-redirects to `/chat` after 3 seconds.
 - Check on a narrow viewport (~375px) that chips wrap and the card is usable.

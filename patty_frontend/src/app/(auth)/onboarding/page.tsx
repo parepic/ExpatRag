@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence } from "framer-motion";
 
@@ -27,6 +27,20 @@ export default function OnboardingPage() {
 
   const currentQuestion = ONBOARDING_QUESTIONS[stepIndex];
   const isLastStep = stepIndex === ONBOARDING_QUESTIONS.length - 1;
+
+  useEffect(() => {
+    if (!completed) {
+      return;
+    }
+
+    const redirectTimeout = window.setTimeout(() => {
+      router.push("/chat");
+    }, 3000);
+
+    return () => {
+      window.clearTimeout(redirectTimeout);
+    };
+  }, [completed, router]);
 
   function setAnswer<K extends OnboardingAnswerKey>(
     key: K,
@@ -78,6 +92,33 @@ export default function OnboardingPage() {
 
   function handleSkip() {
     router.push("/chat");
+  }
+
+  if (completed) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background px-6 py-16">
+        <div className="w-full max-w-xl rounded-3xl border border-border bg-card p-8 text-center shadow-sm">
+          <div className="space-y-6">
+            <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+              You&apos;re all set!
+            </h1>
+            <p className="text-sm leading-6 text-muted-foreground">
+              We&apos;ve saved your details and will use them to give you
+              personalised advice.
+            </p>
+            <div className="flex flex-col items-center gap-3">
+              <div
+                className="h-6 w-6 animate-spin rounded-full border-2 border-primary/25 border-t-primary"
+                aria-hidden="true"
+              />
+              <p className="text-sm text-muted-foreground">
+                Starting your chat with Patty...
+              </p>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
   }
 
   return (
