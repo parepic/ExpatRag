@@ -79,6 +79,7 @@ When `editing` is true:
 - Changes update `draft` state (not the user object directly).
 - "Cancel" button resets `draft` and sets `editing = false`.
 - "Save" button calls `updateUser(draft)` with all fields from the draft. On success, set `editing = false`. On failure, show an error message.
+- For debugging, log the `user` from `useAuthContext()` before and after save (or in a `useEffect` watching `user`) to confirm whether the shared auth-context user actually changes after a successful `PATCH /users/me`.
 
 ### Step 4: Verify
 
@@ -86,6 +87,7 @@ When `editing` is true:
 - Confirm all 8 fields display with their current values (or "—" if empty).
 - Click "Edit" — confirm all fields become editable with the correct input type.
 - Change some values and click "Save" — confirm the changes persist (reload the page or check via `GET /auth/me`).
+- Check the debug logs around save and confirm whether the `user` from `AuthContext` changes or stays stale after saving.
 - Change some values and click "Cancel" — confirm the original values are restored.
 - Confirm the sidebar shows "Back to Patty" link and "Profile" nav item.
 - Check on a narrow viewport (~375px) that the layout is usable.
