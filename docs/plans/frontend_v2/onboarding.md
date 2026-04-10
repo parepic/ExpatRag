@@ -13,9 +13,9 @@ Onboarding is skippable. The app works without profile data, answers just won't 
 ### Wizard-style question flow
 
 - One question per screen, presented in a centered card.
-- Users advance with a "Next" button (or "Finish" on the last question).
-- Back and Forward navigation buttons above the card let users revisit answered questions.
-- Progress is shown via dots below the card indicating how many questions have been answered.
+- Users advance with a "Next" button (or "Finish" on the last question). "Next" is always enabled — users can leave a question blank and move on.
+- A "Back" button above the card lets users go back to the previous question.
+- Progress is shown via dots below the card indicating the current step position.
 - Animated transitions between questions (slide left/right depending on direction) using framer-motion.
 
 ### Questions
@@ -37,23 +37,25 @@ Sublabels for context where needed:
 - `has_fiscal_partner`: "Married, registered partnership, or cohabiting at the same address."
 - `age_bracket_under_30`: "This affects eligibility for the HSM permit and 30% ruling."
 
-### Skip and completion
+### Skip
 
-- A "Skip" link is visible on every question, positioned below the navigation or near the card. Clicking it skips the entire onboarding and redirects to `/chat`.
-- On the last question, the "Next" button changes to "Finish".
-- After finishing, show a completion card with a message ("You're all set!") and a button to start chatting that navigates to `/chat`.
+- A "Skip onboarding" link is visible on every question, positioned below the progress dots.
+- Clicking it navigates to `/chat` immediately — nothing is saved.
 
 ### Saving answers
 
-- Each answer is saved to the backend immediately when the user advances to the next question (not batched at the end). This way, partial completion is preserved if the user abandons the flow.
-- Calls `PATCH /users/me` with the single field that was just answered.
+- All answers are collected in local component state as the user progresses through questions.
+- On "Finish" (last question), a single `PATCH /users/me` call sends all answered fields at once. Only fields that were actually answered are included in the payload — unanswered fields are omitted.
 - For boolean questions (yes/no toggle), the value sent is `true` or `false`.
 - For chip select questions, the value sent is the selected string.
+
+### Completion
+
+- After a successful save, show a completion card with a message ("You're all set!") and a button ("Start chatting with Patty") that navigates to `/chat`.
 
 ### Auth-protected
 
 - This page lives inside the `(auth)` route group, so `AuthContext` handles the redirect to `/login` if the user is not authenticated.
-- The user object from `AuthContext` is available to pre-fill answers if the user returns to onboarding with some fields already set.
 
 ---
 
@@ -78,81 +80,47 @@ pnpm add framer-motion
 
 ### Step 1: Create the API call function
 
-Create `src/lib/api/users.ts` with a function to update the user's profile. Reuses `ApiError` from `auth.ts`.
-
-```ts
-import { ApiError } from "./auth";
-
-const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
-
-export async function updateUser(
-  fields: Record<string, string | boolean | null>,
-): Promise<void> {
-  const res = await fetch(`${API_BASE}/users/me`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify(fields),
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => null);
-    throw new ApiError(res.status, body?.detail ?? "Failed to update profile");
-  }
-}
-```
+Create `src/lib/api/users.ts` with a function to update the user's profile. It calls `PATCH /users/me` with `credentials: "include"` and sends the fields as JSON. Reuses `ApiError` from `auth.ts` for error handling.
 
 ### Step 2: Create the onboarding UI components
 
 Build the four reusable components in `src/components/onboarding/`. These follow the same patterns as the old `frontend/` onboarding components:
 
-**`ChipSelect.tsx`** — renders a grid of option chips. Props: `options: readonly string[]`, `value: string | null`, `onChange: (value: string) => void`. The selected chip gets a distinct style (e.g. `bg-primary text-primary-foreground`), others are outlined.
+**`ChipSelect.tsx`** — renders a grid of option chips. Props: `options` (the constants array), `value` (selected string or null), `onChange` callback. The selected chip gets a distinct style (e.g. `bg-primary text-primary-foreground`), others are outlined.
 
-**`YesNoToggle.tsx`** — two large buttons side by side: "Yes" and "No". Props: `value: boolean | null`, `onChange: (value: boolean) => void`. Maps `true`/`false` to the toggle state.
+**`YesNoToggle.tsx`** — two large buttons side by side: "Yes" and "No". Props: `value` (boolean or null), `onChange` callback. Maps `true`/`false` to the toggle state.
 
-**`ProgressDots.tsx`** — a row of small dots. Props: `total: number`, `current: number` (answered count). Filled dots up to `current`, empty dots for the rest.
+**`ProgressDots.tsx`** — a row of small dots. Props: `total` (number of questions), `current` (current step index). Highlights the current dot and fills dots for visited steps.
 
-**`QuestionCard.tsx`** — a wrapper that animates its children in/out on question change. Props: `direction: "forward" | "back"`, `children`. Uses framer-motion `motion.div` with slide + fade variants keyed by question index.
+**`QuestionCard.tsx`** — a wrapper that animates its children in/out on question change. Props: `direction` ("forward" or "back"), `children`. Uses framer-motion with slide + fade variants keyed by question index.
 
 ### Step 3: Define the question list
 
-In the page file, define the questions as a typed array:
-
-```ts
-interface Question {
-  key: keyof User;
-  label: string;
-  sublabel?: string;
-  type: "chip" | "yesno";
-  options?: readonly string[];
-}
-```
-
-Each question's `key` matches the `User` type field name exactly, so the answer can be sent directly to `PATCH /users/me` as `{ [question.key]: value }`.
+In the page file, define the questions as a typed array. Each entry has a `key` (matching the `User` field name exactly), a `label`, an optional `sublabel`, a `type` ("chip" or "yesno"), and for chip questions, the `options` constants array.
 
 ### Step 4: Page shell and state
 
-Set up `src/app/(auth)/onboarding/page.tsx` as a Client Component (`"use client"`):
+Set up `src/app/(auth)/onboarding/page.tsx` as a Client Component:
 
-- Get `user` from `AuthContext` (available because this page is inside the `(auth)` route group).
-- State: `stepIndex` (current question), `direction` ("forward" | "back"), `answers` (record of field → value), `completed` (boolean).
-- On mount, pre-fill `answers` from the `user` object for any fields that are already set. Start `stepIndex` at the first unanswered question.
+- State: `stepIndex` (current question, starts at 0), `direction` ("forward" or "back"), `answers` (record of field key → value), `completed` (boolean).
+- No pre-filling — this is a fresh linear flow every time.
 
 ### Step 5: Navigation and submission logic
 
-- **Next / Finish button:** Save the current answer to the backend (`updateUser({ [key]: value })`), then advance to the next question or show completion.
-- **Back button:** Move to the previous question (no API call — the answer was already saved).
-- **Forward button:** Move to the next question if it has been answered before (no API call).
+- **Next button:** Advance to the next question. Always enabled — if the user didn't answer, just move on.
+- **Finish button (last question):** Collect all answered fields from state, send a single `PATCH /users/me`, and on success set `completed` to true.
+- **Back button:** Move to the previous question. Disabled on the first question.
 - **Skip link:** Navigate directly to `/chat` without saving.
 
 ### Step 6: Render the wizard
 
 Assemble the page:
 
-1. Back / Forward buttons above the card.
+1. Back button above the card (disabled on first question).
 2. `<AnimatePresence>` wrapping a `<QuestionCard>` keyed by `stepIndex`.
 3. Inside the card: question label, optional sublabel, the appropriate input component (`ChipSelect` or `YesNoToggle`), and the Next/Finish button.
 4. `<ProgressDots>` below the card.
-5. Skip link below the dots.
+5. "Skip onboarding" link below the dots.
 
 ### Step 7: Completion screen
 
@@ -166,9 +134,9 @@ When `completed` is true, render a simple centered card:
 
 - Run `pnpm dev` and navigate to `/onboarding` (must be logged in).
 - Confirm all 8 questions render with the correct input type.
-- Confirm answers are saved to the backend on each "Next" (check via `GET /auth/me`).
-- Confirm Back/Forward navigation works without re-saving.
-- Confirm pre-fill works if the user already has profile data.
-- Confirm "Skip" redirects to `/chat` without saving.
-- Confirm the completion screen appears after the last question.
+- Confirm "Next" works even when no answer is selected.
+- Confirm "Back" navigates to the previous question and preserves the answer.
+- Confirm "Finish" sends a single API call with all answered fields (check via `GET /auth/me`).
+- Confirm "Skip onboarding" redirects to `/chat` without any API call.
+- Confirm the completion screen appears after finishing.
 - Check on a narrow viewport (~375px) that chips wrap and the card is usable.
