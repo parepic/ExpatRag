@@ -181,11 +181,36 @@ Create `src/lib/types/user.ts` — the canonical type for a user, matching the b
 
 Spec: [onboarding.md](frontend_v2/onboarding.md)
 
-### Step 7: Chat interface (`/chat`)
+### Step 7: `AppContext` provider
+
+Create `src/context/AppContext.tsx` — shared state for the app shell, used by the sidebar layout and the chat page. Provides `activeChatId` and `setActiveChatId` via React context. The layout uses it to highlight the active chat in the sidebar and the chat page uses it to know which conversation to display. Wrap this provider in the `(auth)/(app)/layout.tsx` alongside `AuthContext`.
+
+### Step 8: Shared app layout
+
+Create `src/app/(auth)/(app)/layout.tsx` — the shared sidebar layout used by both `/chat` and `/settings/profile`. This is a Client Component that adapts its sidebar content based on the current route.
+
+The layout has two zones: a sidebar on the left and a main content area on the right.
+
+**Sidebar contents:**
+- **Logo** at the top ("Patty").
+- **Nav section** that changes based on the route:
+  - On `/chat`: a link to `/settings/profile` (with a settings icon).
+  - On `/settings/*`: a "Back to Patty" link to `/chat`, plus a settings sub-nav (Profile link).
+- **Chat history list** (only shown on `/chat`): shows recent chat titles. Each item is clickable to set the active chat via `AppContext`. A "+ New" button sets `activeChatId` to `null` (the chat page handles the actual creation). The API calls (`GET /chats`, `POST /chats`, etc.) are not wired up here — they are implemented in Step 9 (chat interface). For now the sidebar can call stub functions or render placeholder data.
+
+**Main content area:**
+- A **header breadcrumb** that reflects the current page (e.g. "Chat with Patty" or "Settings > Profile").
+- Below the header, the page content (`{children}`) fills the remaining height and scrolls independently.
+
+**Route detection:** Use `usePathname()` and check `pathname.startsWith("/settings")` to toggle between chat and settings sidebar modes.
+
+**Reference:** The old `frontend/src/app/(app)/layout.tsx` has this exact layout with good styling. Carry over the structure and visual design — the only change is that chat history comes from the backend API instead of localStorage.
+
+### Step 9: Chat interface (`/chat`)
 
 Spec: [chat.md](frontend_v2/chat.md)
 
-### Step 8: Settings & profile (`/settings/profile`)
+### Step 10: Settings & profile (`/settings/profile`)
 
 Spec: [settings-profile.md](frontend_v2/settings-profile.md)
 
