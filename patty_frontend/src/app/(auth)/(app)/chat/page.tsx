@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { MessageList } from "@/components/chat/MessageList";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useChatContext } from "@/context/ChatContext";
@@ -121,7 +122,7 @@ export default function ChatPage() {
   }
 
   return (
-    <main className="flex h-full min-h-0 flex-col px-6 py-6">
+    <main className="flex h-full min-h-0 flex-col overflow-hidden px-6 py-6">
       <div className="mx-auto flex w-full max-w-4xl flex-1 min-h-0 flex-col gap-4">
         <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
           <p className="text-sm text-muted-foreground">
@@ -132,35 +133,8 @@ export default function ChatPage() {
           ) : null}
         </div>
 
-        <div className="min-h-0 flex-1 rounded-3xl border border-border bg-card p-6 shadow-sm">
-          {messages.length === 0 ? (
-            <div className="flex h-full items-center justify-center">
-              <p className="text-sm text-muted-foreground">
-                Start a new conversation with Patty
-              </p>
-            </div>
-          ) : (
-            <ul className="space-y-4">
-              {messages.map((message) => (
-                <li
-                  key={`${message.role}-${message.created_at}-${message.content}`}
-                  className="space-y-1"
-                >
-                  <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
-                    {message.role}
-                  </p>
-                  <p className="text-sm leading-6 text-foreground">
-                    {message.content}
-                  </p>
-                </li>
-              ))}
-              {isLoading ? (
-                <li className="text-sm text-muted-foreground">
-                  Patty is thinking...
-                </li>
-              ) : null}
-            </ul>
-          )}
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
+          <MessageList messages={messages} isLoading={isLoading} />
         </div>
 
         <div className="rounded-3xl border border-border bg-card p-4 shadow-sm">
