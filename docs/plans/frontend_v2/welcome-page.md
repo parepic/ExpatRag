@@ -68,45 +68,55 @@ Create `src/components/welcome/AnimatedChat.tsx` — a client component (`"use c
 
 **Reference:** The old frontend has this exact component at `frontend/src/components/welcome/AnimatedChat.tsx`. Copy the structure and scripts, adjust styling if needed.
 
-### Step 2: Create the welcome page
+### Step 2: Page shell with auth redirect
 
 Create `src/app/page.tsx` as a Client Component (`"use client"`).
 
-**Auth redirect check:**
-- Use the `useAuth` hook created in Step 1.
+- Use the `useAuth` hook (created in the main plan's Step 1).
 - While `isLoading` is true, render nothing (`return null`) to avoid a flash of content.
 - If `user` is non-null (logged in), redirect to `/chat` using `useRouter().push("/chat")`.
-- If `user` is null and loading is done, render the welcome page.
+- If `user` is null and loading is done, render the welcome page layout.
+- Set up the outer layout: `min-h-screen`, `flex flex-col items-center justify-center`, `bg-background`.
 
-**Layout (top to bottom):**
+### Step 3: AnimatedChat background
 
-1. **AnimatedChat background** — Render the `<AnimatedChat />` component. It positions itself absolutely behind everything.
+- Render the `<AnimatedChat />` component (from Step 1) inside the page.
+- It positions itself absolutely behind everything via its own styles.
 
-2. **Hero section** (centered, z-10 so it sits above the background):
-   - `<h1>` — Large bold headline, e.g. "Your all-in-one expat moving assistant". Use classes like `text-4xl font-bold md:text-5xl`, max-width ~2xl, centered text.
-   - `<p>` — Subtitle below, e.g. "Personalised legal and compliance guidance for expats in the Netherlands — cited from official sources." Muted color, `text-lg`, max-width ~md.
+### Step 4: Hero section
 
-3. **Value highlights** (below hero, still centered):
-   - A row (or grid on mobile: stack vertically) of 3–4 cards/items, each with:
-     - A small icon or emoji
-     - A short text (one line)
-   - Example items:
-     - "Every answer cited from official Dutch sources"
-     - "Personalized to your visa, job, and situation"
-     - "Ask in plain language — no legal jargon needed"
-     - "Free to use — no lawyer fees"
-   - Use `text-sm text-muted-foreground`, subtle styling, no borders or heavy cards — keep it light.
+Add the hero content, centered and z-10 so it sits above the background:
 
-4. **CTA button** (centered, below value highlights or at bottom of viewport):
-   - A shadcn/ui `<Button>` with `size="lg"`, rounded, with text "Get Started".
-   - `onClick` navigates to `/login` using `useRouter().push("/login")`.
+- `<h1>` — Large bold headline, e.g. "Your all-in-one expat moving assistant". Use classes like `text-4xl font-bold md:text-5xl`, max-width ~2xl, centered text.
+- `<p>` — Subtitle below, e.g. "Personalised legal and compliance guidance for expats in the Netherlands — cited from official sources." Muted color, `text-lg`, max-width ~md.
 
-**Styling notes:**
-- Full-screen layout: `min-h-screen`, `flex flex-col items-center justify-center`, `bg-background`.
-- The hero and CTA should be vertically centered on the viewport. The value highlights sit between them.
-- Must look good on mobile (stack elements vertically, reduce font sizes with responsive classes).
+### Step 5: Value highlights
 
-### Step 3: Verify
+Add the value highlights section below the hero, still centered:
+
+- A row (or grid on mobile: stack vertically) of 3–4 items, each with:
+  - A small icon or emoji
+  - A short text (one line)
+- Example items:
+  - "Every answer cited from official Dutch sources"
+  - "Personalized to your visa, job, and situation"
+  - "Ask in plain language — no legal jargon needed"
+  - "Free to use — no lawyer fees"
+- Use `text-sm text-muted-foreground`, subtle styling, no borders or heavy cards — keep it light.
+
+### Step 6: CTA button
+
+Add the call-to-action button, centered below the value highlights:
+
+- A shadcn/ui `<Button>` with `size="lg"`, rounded, with text "Get Started".
+- `onClick` navigates to `/login` using `useRouter().push("/login")`.
+
+### Step 7: Responsive styling pass
+
+- Verify the hero and CTA are vertically centered on the viewport with value highlights between them.
+- Must look good on mobile (~375px) — stack elements vertically, reduce font sizes with responsive classes.
+
+### Step 8: Verify
 
 - Run `pnpm dev` and open `http://localhost:3000/`.
 - Confirm the animated chat background loops correctly behind the content.
