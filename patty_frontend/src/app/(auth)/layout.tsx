@@ -1,7 +1,9 @@
+import { AuthProvider } from "@/context/AuthContext";
+
 export default function AuthLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return children;
+  return <AuthProvider>{children}</AuthProvider>;
 }
