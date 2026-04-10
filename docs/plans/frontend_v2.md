@@ -106,7 +106,7 @@ patty_frontend/
 │   │   └── utils.ts                           # General utilities
 │   └── context/
 │       ├── AuthContext.tsx                    # Wraps useAuth, provides user via React context, redirects if 401
-│       └── AppContext.tsx                     # Shared app state (active chat ID, etc.)
+│       └── ChatContext.tsx                    # Shared chat state (active chat ID, etc.)
 ├── public/                                    # Static assets
 ├── package.json
 ├── tsconfig.json
@@ -181,9 +181,9 @@ Create `src/lib/types/user.ts` — the canonical type for a user, matching the b
 
 Spec: [onboarding.md](frontend_v2/onboarding.md)
 
-### Step 7: `AppContext` provider
+### Step 7: `ChatContext` provider
 
-Create `src/context/AppContext.tsx` — shared state for the app shell, used by the sidebar layout and the chat page. Provides `activeChatId` and `setActiveChatId` via React context. The layout uses it to highlight the active chat in the sidebar and the chat page uses it to know which conversation to display. Wrap this provider in the `(auth)/(app)/layout.tsx` alongside `AuthContext`.
+Create `src/context/ChatContext.tsx` — shared chat state for the app shell, used by the sidebar layout and the chat page. Provides `activeChatId` and `setActiveChatId` via React context. The layout uses it to highlight the active chat in the sidebar and the chat page uses it to know which conversation to display. Wrap this provider in the `(auth)/(app)/layout.tsx` alongside `AuthContext`.
 
 ### Step 8: Shared app layout
 
@@ -196,7 +196,7 @@ The layout has two zones: a sidebar on the left and a main content area on the r
 - **Nav section** that changes based on the route:
   - On `/chat`: a link to `/settings/profile` (with a settings icon).
   - On `/settings/*`: a "Back to Patty" link to `/chat`, plus a settings sub-nav (Profile link).
-- **Chat history list** (only shown on `/chat`): shows recent chat titles. Each item is clickable to set the active chat via `AppContext`. A "+ New" button sets `activeChatId` to `null` (the chat page handles the actual creation). The API calls (`GET /chats`, `POST /chats`, etc.) are not wired up here — they are implemented in Step 9 (chat interface). For now the sidebar can call stub functions or render placeholder data.
+- **Chat history list** (only shown on `/chat`): shows recent chat titles. Each item is clickable to set the active chat via `ChatContext`. A "+ New" button sets `activeChatId` to `null` (the chat page handles the actual creation). The API calls (`GET /chats`, `POST /chats`, etc.) are not wired up here — they are implemented in Step 9 (chat interface). For now the sidebar can call stub functions or render placeholder data.
 
 **Main content area:**
 - A **header breadcrumb** that reflects the current page (e.g. "Chat with Patty" or "Settings > Profile").

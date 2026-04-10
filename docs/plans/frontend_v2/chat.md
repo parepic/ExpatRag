@@ -70,7 +70,7 @@ Each citation in the `citations` array has: `source_title`, `source_url`, and `c
 
 ### Sending a message
 
-- **New conversation (no `activeChatId` in `AppContext`):** Call `POST /chats` with `{ message }`. Set `activeChatId` to the returned `chat_id` and render both returned messages.
+- **New conversation (no `activeChatId` in `ChatContext`):** Call `POST /chats` with `{ message }`. Set `activeChatId` to the returned `chat_id` and render both returned messages.
 - **Existing conversation:** Call `POST /chats/{chat_id}/messages` with `{ message }`. Append both returned messages to the thread.
 - In both cases, the response is synchronous (no streaming). Show a loading indicator in the message area while waiting.
 
@@ -86,14 +86,14 @@ Each citation in the `citations` array has: `source_title`, `source_url`, and `c
 
 ### Loading an existing chat
 
-- When the user selects a chat from the sidebar, `activeChatId` is set in `AppContext`.
+- When the user selects a chat from the sidebar, `activeChatId` is set in `ChatContext`.
 - The chat page calls `GET /chats/{chat_id}` to fetch the message history and renders all messages in the thread.
 - While loading, show a skeleton/spinner in the chat area.
 
 ### Sidebar integration
 
 - The sidebar (from the shared layout, Step 8) shows the chat history list. The chat page is responsible for:
-  - Fetching the chat list from `GET /chats` and making it available (either via `AppContext` or passed to the layout).
+  - Fetching the chat list from `GET /chats` and making it available (either via `ChatContext` or passed to the layout).
   - Updating the list when a new chat is created (the new chat should appear at the top of the sidebar).
   - Handling chat deletion if we add that later (not in scope for v1).
 
@@ -148,7 +148,7 @@ Create `src/lib/api/chats.ts` with functions that mirror the backend chat endpoi
 Replace the chat page scaffold with a Client Component that sets up all the state logic. Use dummy UI (plain text list of messages, basic input + button) to test the full send/receive flow against the backend.
 
 - Local page state: `messages` (array of `Message`, starts empty), `isLoading` (boolean).
-- Read `activeChatId` from `AppContext`.
+- Read `activeChatId` from `ChatContext`.
 - **`useEffect` on `activeChatId`:** Every time `activeChatId` changes, reset `messages` and reload:
   - If `activeChatId` is null: set `messages = []` (shows empty/welcome state).
   - If `activeChatId` is set: call `fetchChat(activeChatId)` and set `messages` to the returned message array.
@@ -196,7 +196,7 @@ Replace the dummy input with a proper component:
 
 ### Step 7: Wire up the sidebar chat list
 
-- On mount, call `fetchChats()` and store the list in state (or in `AppContext` if the sidebar needs it).
+- On mount, call `fetchChats()` and store the list in state (or in `ChatContext` if the sidebar needs it).
 - When a new chat is created, prepend it to the list so it appears at the top of the sidebar.
 - When a sidebar item is clicked, `setActiveChatId` is called (handled by the layout), which triggers the chat page to load that conversation.
 

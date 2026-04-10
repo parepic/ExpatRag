@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { ArrowLeft, ChevronRight, Settings } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { AppProvider, useAppContext } from "@/context/AppContext";
+import { ChatProvider, useChatContext } from "@/context/ChatContext";
 
 type AppLayoutProps = {
   children: React.ReactNode;
@@ -51,7 +51,7 @@ function AppShell({ children }: AppLayoutProps) {
   const pathname = usePathname();
   const inSettings = isSettingsRoute(pathname);
   const breadcrumbs = getBreadcrumbs(pathname);
-  const { activeChatId, setActiveChatId } = useAppContext();
+  const { activeChatId, setActiveChatId } = useChatContext();
 
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
@@ -169,8 +169,8 @@ function AppShell({ children }: AppLayoutProps) {
 
 export default function AppLayout({ children }: AppLayoutProps) {
   return (
-    <AppProvider>
+    <ChatProvider>
       <AppShell>{children}</AppShell>
-    </AppProvider>
+    </ChatProvider>
   );
 }
