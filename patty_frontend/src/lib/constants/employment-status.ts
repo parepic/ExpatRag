@@ -1,4 +1,4 @@
-export const OCCUPATION_OPTIONS = [
+export const EMPLOYMENT_STATUS_OPTIONS = [
   "Employed full-time",
   "Employed part-time",
   "Self-employed / ZZP",

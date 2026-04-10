@@ -111,12 +111,7 @@ Add the call-to-action button, centered below the value highlights:
 - A shadcn/ui `<Button>` with `size="lg"`, rounded, with text "Get Started".
 - `onClick` navigates to `/login` using `useRouter().push("/login")`.
 
-### Step 7: Responsive styling pass
-
-- Verify the hero and CTA are vertically centered on the viewport with value highlights between them.
-- Must look good on mobile (~375px) — stack elements vertically, reduce font sizes with responsive classes.
-
-### Step 8: Verify
+### Step 7: Verify
 
 - Run `pnpm dev` and open `http://localhost:3000/`.
 - Confirm the animated chat background loops correctly behind the content.

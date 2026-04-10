@@ -1,4 +1,4 @@
-export const PURPOSE_OPTIONS = [
+export const PURPOSE_OF_STAY_OPTIONS = [
   "Employed by Dutch/EU company",
   "Highly Skilled Migrant",
   "Self-employed / ZZP",
