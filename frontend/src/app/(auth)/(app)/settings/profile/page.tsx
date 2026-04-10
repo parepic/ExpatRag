@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import { ChipSelect } from "@/components/onboarding/ChipSelect";
 import { YesNoToggle } from "@/components/onboarding/YesNoToggle";
@@ -35,7 +34,6 @@ function formatValue(value: string | boolean | null) {
 }
 
 export default function SettingsProfilePage() {
-  const router = useRouter();
   const { user } = useAuthContext();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<ProfileDraft>(() => createDraftFromUser(user));
@@ -48,12 +46,8 @@ export default function SettingsProfilePage() {
   }, [user]);
 
   useEffect(() => {
-    if (editing) {
-      return;
-    }
-
     setProfile(createDraftFromUser(user));
-  }, [editing, user]);
+  }, [user]);
 
   function setField<K extends UserProfileKey>(key: K, value: UserProfile[K]) {
     setDraft((current) => ({
@@ -84,7 +78,7 @@ export default function SettingsProfilePage() {
       setProfile(draft);
       setEditing(false);
       console.log("[settings/profile] Save succeeded. AuthContext user after save:", user);
-      router.refresh();
+      window.location.reload();
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
