@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { AnimatePresence } from "framer-motion";
 
+import { Button } from "@/components/ui/button";
+import { ChipSelect } from "@/components/onboarding/ChipSelect";
+import { ProgressDots } from "@/components/onboarding/ProgressDots";
+import { QuestionCard } from "@/components/onboarding/QuestionCard";
+import { YesNoToggle } from "@/components/onboarding/YesNoToggle";
 import { updateUser } from "@/lib/api/users";
 import { ONBOARDING_QUESTIONS } from "@/lib/onboarding/questions";
 import type { User } from "@/lib/types/user";
@@ -19,7 +25,18 @@ export default function OnboardingPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
 
+  const currentQuestion = ONBOARDING_QUESTIONS[stepIndex];
   const isLastStep = stepIndex === ONBOARDING_QUESTIONS.length - 1;
+
+  function setAnswer<K extends OnboardingAnswerKey>(
+    key: K,
+    value: OnboardingAnswers[K],
+  ) {
+    setAnswers((current) => ({
+      ...current,
+      [key]: value,
+    }));
+  }
 
   function handleBack() {
     if (stepIndex === 0) {
@@ -64,91 +81,71 @@ export default function OnboardingPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-6 py-16">
-      <div className="w-full max-w-2xl rounded-3xl border border-border bg-card p-10 shadow-sm">
-        <p className="text-sm font-medium uppercase tracking-[0.24em] text-muted-foreground">
-          Protected Route
-        </p>
-        <h1 className="mt-4 text-4xl font-semibold tracking-tight">
-          Onboarding navigation ready
-        </h1>
-        <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          Step 5 adds linear navigation, finish/save behavior, and skip
-          handling. Rendering the actual wizard comes next.
-        </p>
-
-        <div className="mt-8 space-y-3 text-sm">
-          <div className="rounded-2xl border border-border/80 bg-muted/30 px-4 py-3">
-            <p className="font-medium text-foreground">Current step index</p>
-            <p className="mt-1 text-muted-foreground">{stepIndex}</p>
-          </div>
-          <div className="rounded-2xl border border-border/80 bg-muted/30 px-4 py-3">
-            <p className="font-medium text-foreground">Direction</p>
-            <p className="mt-1 text-muted-foreground">{direction}</p>
-          </div>
-          <div className="rounded-2xl border border-border/80 bg-muted/30 px-4 py-3">
-            <p className="font-medium text-foreground">Completed</p>
-            <p className="mt-1 text-muted-foreground">
-              {completed ? "Yes" : "No"}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-border/80 bg-muted/30 px-4 py-3">
-            <p className="font-medium text-foreground">Saving</p>
-            <p className="mt-1 text-muted-foreground">
-              {isSaving ? "Yes" : "No"}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-border/80 bg-muted/30 px-4 py-3">
-            <p className="font-medium text-foreground">Questions</p>
-            <p className="mt-1 text-muted-foreground">
-              {ONBOARDING_QUESTIONS.length} total
-            </p>
-          </div>
-          <div className="rounded-2xl border border-border/80 bg-muted/30 px-4 py-3">
-            <p className="font-medium text-foreground">Current action label</p>
-            <p className="mt-1 text-muted-foreground">
-              {isLastStep ? "Finish" : "Next"}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-border/80 bg-muted/30 px-4 py-3">
-            <p className="font-medium text-foreground">Collected answers</p>
-            <pre className="mt-2 overflow-x-auto text-xs leading-6 text-muted-foreground">
-              {JSON.stringify(answers, null, 2)}
-            </pre>
-          </div>
-          {error ? (
-            <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3">
-              <p className="font-medium text-destructive">Error</p>
-              <p className="mt-1 text-destructive">{error}</p>
-            </div>
-          ) : null}
-        </div>
-
-        <div className="mt-8 flex flex-wrap gap-3">
-          <button
+    <main className="flex min-h-screen items-center justify-center bg-background px-6 py-16">
+      <div className="flex w-full max-w-3xl flex-col items-center">
+        <div className="mb-6 flex w-full max-w-xl justify-start">
+          <Button
             type="button"
-            className="rounded-full border border-border px-4 py-2 text-sm"
+            variant="outline"
             onClick={handleBack}
             disabled={stepIndex === 0}
           >
             Back
-          </button>
-          <button
-            type="button"
-            className="rounded-full border border-border px-4 py-2 text-sm"
-            onClick={handleNext}
-            disabled={isSaving}
-          >
-            {isLastStep ? "Finish" : "Next"}
-          </button>
-          <button
-            type="button"
-            className="rounded-full border border-border px-4 py-2 text-sm"
-            onClick={handleSkip}
-          >
-            Skip onboarding
-          </button>
+          </Button>
         </div>
+
+        <AnimatePresence mode="wait" initial={false}>
+          <QuestionCard key={currentQuestion.key} direction={direction}>
+            <div className="space-y-8">
+              <div className="space-y-3">
+                <p className="text-sm font-medium uppercase tracking-[0.24em] text-muted-foreground">
+                  Step {stepIndex + 1} of {ONBOARDING_QUESTIONS.length}
+                </p>
+                <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+                  {currentQuestion.label}
+                </h1>
+                {currentQuestion.sublabel ? (
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    {currentQuestion.sublabel}
+                  </p>
+                ) : null}
+              </div>
+
+              {currentQuestion.type === "chip" ? (
+                <ChipSelect
+                  options={currentQuestion.options ?? []}
+                  value={(answers[currentQuestion.key] as string | null) ?? null}
+                  onChange={(value) => setAnswer(currentQuestion.key, value)}
+                />
+              ) : (
+                <YesNoToggle
+                  value={(answers[currentQuestion.key] as boolean | null) ?? null}
+                  onChange={(value) => setAnswer(currentQuestion.key, value)}
+                />
+              )}
+
+              {error ? <p className="text-sm text-destructive">{error}</p> : null}
+
+              <div className="flex justify-center">
+                <Button type="button" onClick={handleNext} disabled={isSaving}>
+                  {isSaving ? "Saving..." : isLastStep ? "Finish" : "Next"}
+                </Button>
+              </div>
+            </div>
+          </QuestionCard>
+        </AnimatePresence>
+
+        <div className="mt-6">
+          <ProgressDots total={ONBOARDING_QUESTIONS.length} current={stepIndex + 1} />
+        </div>
+
+        <button
+          type="button"
+          className="mt-6 text-sm text-muted-foreground underline-offset-4 hover:underline"
+          onClick={handleSkip}
+        >
+          Skip onboarding
+        </button>
       </div>
     </main>
   );
