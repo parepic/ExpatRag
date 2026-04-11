@@ -39,3 +39,7 @@ AGENTS.md
 
 # Data pipeline local snapshot
 data_pipeline/data/documents.jsonl
+
+
+# Log files
+logs/
