@@ -76,6 +76,7 @@ Notes:
 
 - For local Supabase, the `SUPABASE_SERVICE_KEY` should be in the terminal after starting supabase.
 - If LangSmith variables are set, backend and pipeline LangChain calls will be traced automatically.
+- The frontend also needs its own local env file. See [frontend/README.md](/Users/amarmesic/Documents/AI-ML/ExpatRag/frontend/README.md) for the required `frontend/.env.local` setup.
 
 ### 3) Run app services (recommended with just)
 
@@ -147,6 +148,7 @@ just install
 npx supabase start
 npx supabase status
 # create .env using the values above
+# create frontend/.env.local as described in frontend/README.md
 just backend
 just frontend
 just pipeline-full

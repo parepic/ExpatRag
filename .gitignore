@@ -12,6 +12,7 @@ venv/
 node_modules/
 .next/
 out/
+.pnpm-store/
 
 # Environment
 .env
@@ -33,9 +34,12 @@ Thumbs.db
 # LLMs
 .claude
 .superpowers
-docs/superpowers/
+
 CLAUDE.md
 AGENTS.md
 
 # Data pipeline local snapshot
 data_pipeline/data/documents.jsonl
+
+# Local planning docs
+docs/plans/
