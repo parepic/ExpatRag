@@ -12,11 +12,13 @@ from langsmith import traceable
 from pydantic import BaseModel, Field
 
 from app.core.config import EMBEDDING_MODEL, LLM_MODEL, RAG_MATCH_COUNT, RAG_MATCH_THRESHOLD, SEARCH_STRATEGY
+from app.core.logging import get_logger
 from app.core.prompts import RAG_PROMPT
 from app.core.supabase_client import supabase
 from app.services.rag_utils import reciprocal_rank_fusion
 
 load_dotenv()
+logger = get_logger(__name__)
 
 class QueryVariations(BaseModel):
     variations: List[str]=Field(..., description="Query variations generated for Multi Query Search")
@@ -67,7 +69,7 @@ def vector_search(question: str) -> list[dict]:
             "match_count": RAG_MATCH_COUNT,
         },
     ).execute()
-
+    logger.info("vector_search_results", result_count=len(result.data or []))
     return result.data or []
 
 
@@ -81,7 +83,7 @@ def _keyword_search(question: str) -> list[dict]:
             "match_count": RAG_MATCH_COUNT,
         },
     ).execute()
-
+    logger.info("keyword_search_results", result_count=len(result.data or []))
     return result.data or []
 
 @traceable(run_type="retriever", name="hybrid_search_retrieval")
@@ -94,20 +96,32 @@ def hybrid_search(question: str) -> list[dict]:
 @traceable(run_type="retriever", name="multi_query_vector_search_retrieval")
 def multi_query_vector_search(question: str) -> list[dict]:
     queries = _generate_query_variations(question)
+    logger.info("multi_query_vector_search_started", query_count=len(queries))
     all_results = []
     for i, query in enumerate(queries):
         results = vector_search(query)
-        print(f"Query {i+1}: {query}\nReturned {len(results)} chunks\n\n")
+        logger.info(
+            "multi_query_vector_search_iteration",
+            query_index=i + 1,
+            query=query,
+            result_count=len(results),
+        )
         all_results.append(results)
     return reciprocal_rank_fusion(all_results)
 
 @traceable(run_type="retriever", name="multi_query_hybrid_search_retrieval")
 def multi_query_hybrid_search(question: str) -> list[dict]:
     queries = _generate_query_variations(question)
+    logger.info("multi_query_hybrid_search_started", query_count=len(queries))
     all_results = []
     for i, query in enumerate(queries):
         results = hybrid_search(query)
-        print(f"Query {i+1}: {query}\nReturned {len(results)} chunks\n\n")
+        logger.info(
+            "multi_query_hybrid_search_iteration",
+            query_index=i + 1,
+            query=query,
+            result_count=len(results),
+        )
         all_results.append(results)
     return reciprocal_rank_fusion(all_results)
 
@@ -137,6 +151,7 @@ def _generate_query_variations(user_query: str, num_queries: int = 3) -> list[st
     """
     system_prompt = f"""Generate {num_queries-1} alternative ways to phrase this questions for document search. Use different keywords and synonyms while maintaining the same intent. Return exactly {num_queries-1} variations."""
 
+    logger.info("generating_query_variations", requested_count=num_queries, returned_count=len(result.variations) + 1)
     try:
         messages = [
             SystemMessage(content=system_prompt),
@@ -144,12 +159,11 @@ def _generate_query_variations(user_query: str, num_queries: int = 3) -> list[st
         ]
         structured_llm = _get_llm().with_structured_output(QueryVariations)
         result: QueryVariations = structured_llm.invoke(messages)
+        logger.info("query_variations_generated", requested_count=num_queries, returned_count=len(result.variations) + 1)
         return [user_query, *result.variations][:num_queries]
     
     except Exception as e:
-        print(f"Cannot generate query variations. Reason: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        logger.error("query_variation_generation_failed", error=str(e), exc_info=True)
         return [user_query]
 
 # ---------------------------------------------------------------------------
@@ -239,6 +253,7 @@ def generate_rag_reply(
     """
 
     
+    logger.info("rag_reply_generation_started", user_id=user_id, retrieval_strategy=SEARCH_STRATEGY)
     retrieval_function = _get_retrieval_function(SEARCH_STRATEGY)
     chunks = retrieval_function(
         question,
@@ -254,6 +269,7 @@ def generate_rag_reply(
             },
         },
     )
+    logger.info("retrieval_completed", retrieved_chunk_count=len(chunks))
     context = _build_context(chunks)
     user_profile = _load_user_profile(user_id)
     user_profile_text = _format_user_profile(user_profile)
@@ -310,5 +326,5 @@ def generate_rag_reply(
         }
         for chunk_ref in valid_used_chunk_refs
     ]
-
+    # logger.info("rag_reply_generated", used_chunk_ref_count=len(valid_used_chunk_refs), citation_count=len(citations))
     return reply_text, citations
