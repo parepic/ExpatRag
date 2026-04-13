@@ -2,79 +2,121 @@
 
 import { useEffect, useState } from "react";
 
-const SCRIPT_1 = [
+type ChatMessage = {
+  role: "user" | "patty";
+  text: string;
+};
+
+const DIGID_SCRIPT: ChatMessage[] = [
   { role: "user", text: "Can you help me get started with my DigiD?" },
-  { role: "patty", text: "Of course! DigiD is your digital identity for Dutch government services. First, you'll need a BSN number from your municipality." },
+  {
+    role: "patty",
+    text: "Of course. DigiD is your digital identity for Dutch government services, and you will first need a BSN from your municipality.",
+  },
   { role: "user", text: "How do I get a BSN number?" },
-  { role: "patty", text: "You get your BSN when you register at your local gemeente. Book an appointment at the BRP desk — you'll need your passport and proof of address." },
-  { role: "user", text: "What documents do I need?" },
-  { role: "patty", text: "Bring a valid passport or ID, a completed registration form, and proof of your Dutch address (e.g. rental contract or letter from your landlord)." },
+  {
+    role: "patty",
+    text: "You receive a BSN when you register with your local gemeente. Bring your passport and proof of your Dutch address.",
+  },
+  { role: "user", text: "What documents should I prepare?" },
+  {
+    role: "patty",
+    text: "Usually a valid passport or ID, a registration form, and proof of address such as a rental contract or landlord letter.",
+  },
 ];
 
-const SCRIPT_2 = [
+const TAX_SCRIPT: ChatMessage[] = [
   { role: "user", text: "Am I eligible for the 30% ruling?" },
-  { role: "patty", text: "The 30% ruling lets qualifying expats receive 30% of their salary tax-free. You must be hired from abroad for specific expertise." },
+  {
+    role: "patty",
+    text: "It can apply if you were hired from abroad and meet the salary and distance requirements for the Dutch tax ruling.",
+  },
   { role: "user", text: "What are the main requirements?" },
-  { role: "patty", text: "You need to earn above €46,107, have lived 150+ km from the Dutch border before hiring, and have skills scarce in the Netherlands." },
+  {
+    role: "patty",
+    text: "You generally need qualifying expertise, to have lived far enough from the Dutch border, and to meet the minimum salary threshold.",
+  },
   { role: "user", text: "How does my employer apply?" },
-  { role: "patty", text: "Your employer applies with the Belastingdienst within 4 months of your start date, using your employment contract and foreign address proof." },
+  {
+    role: "patty",
+    text: "Your employer applies with the Belastingdienst, ideally within the first four months, using your contract and supporting documents.",
+  },
 ];
 
-type Script = typeof SCRIPT_1;
-
-function ChatColumn({ script, delayMs }: { script: Script; delayMs: number }) {
-  const [visible, setVisible] = useState<number[]>([]);
+function ChatColumn({
+  script,
+  initialDelayMs,
+}: {
+  script: ChatMessage[];
+  initialDelayMs: number;
+}) {
+  const [visibleCount, setVisibleCount] = useState(0);
 
   useEffect(() => {
-    let i = 0;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
     let cancelled = false;
 
-    function showNext() {
-      if (cancelled) return;
-      setVisible((prev) => [...prev, i]);
-      i++;
-      if (i < script.length) {
-        setTimeout(showNext, 1800);
-      } else {
-        setTimeout(() => {
-          if (cancelled) return;
-          setVisible([]);
-          i = 0;
-          setTimeout(showNext, 600);
-        }, 3000);
-      }
-    }
+    const schedule = (callback: () => void, delayMs: number) => {
+      timeoutId = setTimeout(() => {
+        if (!cancelled) {
+          callback();
+        }
+      }, delayMs);
+    };
 
-    const timer = setTimeout(showNext, delayMs);
+    const runLoop = (nextIndex: number) => {
+      if (nextIndex < script.length) {
+        schedule(() => {
+          setVisibleCount(nextIndex + 1);
+          runLoop(nextIndex + 1);
+        }, nextIndex === 0 ? initialDelayMs : 1800);
+        return;
+      }
+
+      schedule(() => {
+        setVisibleCount(0);
+        runLoop(0);
+      }, 3000);
+    };
+
+    runLoop(0);
+
     return () => {
       cancelled = true;
-      clearTimeout(timer);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
     };
-  }, [script, delayMs]);
+  }, [initialDelayMs, script]);
 
   return (
     <div className="flex flex-col gap-3">
-      {script.map((msg, i) => (
-        <div
-          key={i}
-          className={[
-            "transition-all duration-500",
-            visible.includes(i) ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2",
-            msg.role === "user" ? "self-end" : "self-start",
-          ].join(" ")}
-        >
+      {script.map((message, index) => {
+        const isVisible = index < visibleCount;
+        const isUser = message.role === "user";
+
+        return (
           <div
+            key={`${message.role}-${index}`}
             className={[
-              "px-4 py-2 rounded-2xl text-sm max-w-[260px]",
-              msg.role === "user"
-                ? "rounded-br-sm bg-primary text-primary-foreground"
-                : "rounded-bl-sm border border-border bg-card text-card-foreground",
+              "flex transition-all duration-500",
+              isUser ? "justify-end" : "justify-start",
+              isVisible ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0",
             ].join(" ")}
           >
-            {msg.text}
+            <div
+              className={[
+                "max-w-[18rem] rounded-2xl px-4 py-2 text-sm leading-6 shadow-sm",
+                isUser
+                  ? "rounded-br-sm bg-primary text-primary-foreground"
+                  : "rounded-bl-sm border border-border bg-card text-card-foreground",
+              ].join(" ")}
+            >
+              {message.text}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -82,12 +124,14 @@ function ChatColumn({ script, delayMs }: { script: Script; delayMs: number }) {
 export function AnimatedChat() {
   return (
     <div
-      className="absolute inset-0 flex items-center justify-center overflow-hidden pointer-events-none"
+      className="pointer-events-none absolute inset-0 overflow-hidden"
       style={{ opacity: 0.18, filter: "blur(1.5px)" }}
     >
-      <div className="grid grid-cols-2 gap-8 max-w-5xl w-[80%] px-6">
-        <ChatColumn script={SCRIPT_1} delayMs={800} />
-        <ChatColumn script={SCRIPT_2} delayMs={2400} />
+      <div className="flex h-full items-center justify-center">
+        <div className="grid w-full max-w-5xl grid-cols-1 gap-8 px-6 md:grid-cols-2">
+          <ChatColumn script={DIGID_SCRIPT} initialDelayMs={800} />
+          <ChatColumn script={TAX_SCRIPT} initialDelayMs={2400} />
+        </div>
       </div>
     </div>
   );

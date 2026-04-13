@@ -1,26 +1,32 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 
-interface QuestionCardProps {
+type QuestionCardProps = {
+  direction: "forward" | "back";
   children: ReactNode;
-  direction?: "forward" | "back";
-}
+};
 
 const variants = {
   enter: (direction: "forward" | "back") => ({
-    y: direction === "forward" ? 40 : -40,
+    x: direction === "forward" ? 40 : -40,
     opacity: 0,
   }),
-  center: { y: 0, opacity: 1 },
+  center: {
+    x: 0,
+    opacity: 1,
+  },
   exit: (direction: "forward" | "back") => ({
-    y: direction === "forward" ? -40 : 40,
+    x: direction === "forward" ? -40 : 40,
     opacity: 0,
   }),
 };
 
-export function QuestionCard({ children, direction = "forward" }: QuestionCardProps) {
+export function QuestionCard({
+  direction,
+  children,
+}: QuestionCardProps) {
   return (
     <motion.div
       custom={direction}
@@ -29,7 +35,7 @@ export function QuestionCard({ children, direction = "forward" }: QuestionCardPr
       animate="center"
       exit="exit"
       transition={{ duration: 0.25, ease: "easeInOut" }}
-      className="w-full max-w-lg rounded-[--radius] border border-border bg-card p-8 shadow-sm"
+      className="w-full max-w-xl rounded-3xl border border-border bg-card p-8 shadow-sm"
     >
       {children}
     </motion.div>
