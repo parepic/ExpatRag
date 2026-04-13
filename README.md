@@ -95,7 +95,7 @@ Tests run the full RAG pipeline against a golden dataset of 10 Q&A pairs and sco
 - **Answer Correctness** — generated answer vs. reference answer
 - **Retrieval Relevance** — retrieved chunks vs. the question
 
-Both require LangSmith. On first run the golden dataset is uploaded to LangSmith as `expatrag-golden-v1` and reused on every subsequent run, so results across experiments are comparable. Detailed scores and judge reasoning are visible in the LangSmith UI.
+Both require LangSmith. On first run the golden dataset is uploaded to LangSmith as `expatrag-golden-v1` and reused on every subsequent run, so results across experiments are comparable. Detailed test results, including scores and judge reasoning, are visible on the [LangSmith website](https://smith.langchain.com) (LangSmith UI).
 
 ```bash
 npx supabase start   # must be running
