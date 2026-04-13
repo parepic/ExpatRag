@@ -1,155 +1,113 @@
 # ExpatRag
 
-A RAG-powered legal and compliance assistant for expats and small businesses in the Netherlands. It translates complex rules from government sources (IND, Belastingdienst, KVK) into plain, actionable answers — with every claim cited back to the official source.
-
-## Key Features
-
-- **Data pipeline** — Walks the IND.nl English HTML sitemap, fetches pages via [scrape.do](https://scrape.do), extracts main text with Unstructured, writes a JSONL snapshot to `data_pipeline/data/documents.jsonl`, upserts into Supabase `sources`, then chunks and embeds into `document_chunks` (OpenAI). Use `just pipeline-full` for the full flow, `just ingest` for ingest by web scraping, `just ingest-from-jsonl` to load from JSONL into `sources`, or `just chunk-pages` for chunking only.
-- **RAG-based Q&A** — User questions are embedded, matched against retrieved legal chunks, and answered by an LLM
-- **Citation engine** — Every answer includes direct hyperlinks to the source paragraph on the government website, preventing hallucinated legal advice
-- **Bilingual** — Handles both Dutch and English government content
-- **Personalized answers** — Users provide personal details (visa type, employment situation, country of origin, etc.) that are used to tailor answers to their specific situation. User profiles are currently stored in browser cookies; a database-backed user system is planned for later
+A RAG-powered assistant that helps expats navigate Dutch immigration, visa, and residency rules. It retrieves content from official government sources (IND.nl), answers questions in plain language, and cites the exact source for every claim.
 
 ## Prerequisites
 
-- [uv](https://docs.astral.sh/uv/getting-started/installation/) (Python package manager)
-- [Node.js](https://nodejs.org/) (v20+)
-- [pnpm](https://pnpm.io/installation)
-- [just](https://github.com/casey/just#installation) (command runner)
-- [Supabase CLI](https://supabase.com/docs/guides/cli) (or use `npx supabase ...`)
+- [uv](https://docs.astral.sh/uv/getting-started/installation/)
+- [Node.js](https://nodejs.org/) v20+ and [pnpm](https://pnpm.io/installation)
+- [just](https://github.com/casey/just#installation)
+- [Supabase CLI](https://supabase.com/docs/guides/cli) (or `npx supabase`)
+- Docker (required by Supabase)
 
 ## Project Structure
 
 ```
-
-backend/        → FastAPI API server
-frontend/       → Next.js web app
-data_pipeline/  → scrape / extract → Supabase + chunking
-supabase/   → Local Supabase config + SQL migrations
+backend/         FastAPI API server
+frontend/        Next.js web app
+data_pipeline/   Scrape → extract → chunk → embed into Supabase
+supabase/        Local Supabase config and SQL migrations
 ```
 
-All Python packages are managed as a [uv workspace](https://docs.astral.sh/uv/concepts/workspaces/) from the repo root. Each package (`backend/`, `data_pipeline/`) has its own `pyproject.toml`, sharing a single `.venv` and `uv.lock` at the root.
-
 ## Setup
+
+### 1. Install dependencies
 
 ```bash
 just install
 ```
 
-This installs all Python dependencies (via uv) and frontend dependencies (via pnpm).
-
-## Local Development (Step-by-step)
-
-### 1) Start Supabase (required first)
-
-Supabase is configured from the repository root (`supabase/config.toml`).
+### 2. Start Supabase
 
 ```bash
-# start local stack (Docker required)
 npx supabase start
-
-# print API URL + keys
-npx supabase status
 ```
 
-If this is your first run (or after schema changes), apply migrations:
+On first run, or after schema changes:
 
 ```bash
 npx supabase db reset
 ```
 
-### 2) Create `.env` at repo root
+### 3. Configure environment variables
 
-Use values from `npx supabase status`:
+**Root `.env`** (used by backend and data pipeline):
 
 ```env
 SUPABASE_API_URL=http://127.0.0.1:54321
-SUPABASE_SERVICE_KEY=<service_role_key_from_supabase_status> (starts with sb_secret)
-OPENAI_API_KEY=<your_openai_key>
-LANGSMITH_API_KEY=<your_langsmith_key> (optional: enables LangChain tracing)
+SUPABASE_SERVICE_KEY=          # from `npx supabase status` → service_role key
+OPENAI_API_KEY=                # required for embeddings and generation
+FRONTEND_URL=http://localhost:3000
+
+# LangSmith — optional for tracing, required for running tests
+LANGSMITH_API_KEY=
 LANGSMITH_TRACING=true
 LANGSMITH_PROJECT=expatrag
-SCRAPE_DO_TOKEN=<your_scrape_do_token> (optional: should be set if you want to use the web scraper)
+
+# Required only if running the web scraper (not needed for ingest-from-json)
+SCRAPE_DO_TOKEN=
 ```
 
-Notes:
+**`frontend/.env.local`**:
 
-- For local Supabase, the `SUPABASE_SERVICE_KEY` should be in the terminal after starting supabase.
-- If LangSmith variables are set, backend and pipeline LangChain calls will be traced automatically.
-- The frontend also needs its own local env file. See [frontend/README.md](/Users/amarmesic/Documents/AI-ML/ExpatRag/frontend/README.md) for the required `frontend/.env.local` setup.
+```env
+NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
+```
 
-### 3) Run app services (recommended with just)
+### 4. Run
 
-From the repo root, use separate terminals:
+Open three terminals from the repo root:
 
 ```bash
-# terminal 1
-just backend
-
-# terminal 2
-just frontend
-
-# terminal 3 (pipeline: scrape → JSONL → store → chunk)
-just pipeline-full
+just backend     # FastAPI on :8000
+just frontend    # Next.js on :3000
 ```
 
-Additional pipeline commands:
+The database needs data before the app is useful — see **Data Pipeline** below.
+
+## Data Pipeline
+
+Scrapes IND.nl, stores pages in Supabase, then chunks and embeds them.
 
 ```bash
-just ingest       # ingest only (scrape → JSONL → store)
-just ingest-from-jsonl  # JSONL → store (no HTTP)
-just chunk-pages        # chunk only
+just pipeline-full       # full flow: scrape → store → chunk
+just ingest              # scrape → JSONL → store (no chunking)
+just ingest-from-json    # load from existing JSONL → store (no HTTP requests)
+just chunk-pages         # chunk and embed already-stored pages
 ```
 
-## Running (Manual Commands — Alternative to just)
+`data_pipeline/data/documents.jsonl` contains a pre-scraped snapshot, so you can run `just ingest-from-json && just chunk-pages` without needing a `SCRAPE_DO_TOKEN`.
 
-Use these only if you prefer not to run `just` recipes.
+## Testing
 
-From the repo root:
+Tests run the full RAG pipeline against a golden dataset of 10 Q&A pairs and score results with two LLM-as-judge evaluators:
+
+- **Answer Correctness** — generated answer vs. reference answer
+- **Retrieval Relevance** — retrieved chunks vs. the question
+
+Both require LangSmith. On first run the golden dataset is uploaded to LangSmith as `expatrag-golden-v1` and reused on every subsequent run, so results across experiments are comparable. Detailed test results, including scores and judge reasoning, are visible on the [LangSmith website](https://smith.langchain.com) (LangSmith UI).
 
 ```bash
-npx supabase start
-uv run --package backend fastapi dev backend/app/main.py
-cd frontend && pnpm dev
-uv run --package data-pipeline python3 data_pipeline/pipeline.py
+npx supabase start   # must be running
+uv run --package backend pytest backend/tests/test_rag_eval.py -v -s
 ```
 
-Ingest only:
+## Useful URLs
 
-```bash
-uv run --package data-pipeline python3 data_pipeline/ingest.py
-uv run --package data-pipeline python3 data_pipeline/ingest.py --skip-data-fetch
-```
-
-Chunking only:
-
-```bash
-uv run --package data-pipeline python3 data_pipeline/chunk.py
-```
-
-## Supabase (Useful urls)
-
-Useful URLs after startup:
-
-- API: `http://127.0.0.1:54321`
-- Studio: `http://127.0.0.1:54323`
-
-## Backend API Docs
-
-With backend running, open:
-
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
-
-## Quick Start (Order)
-
-```bash
-just install
-npx supabase start
-npx supabase status
-# create .env using the values above
-# create frontend/.env.local as described in frontend/README.md
-just backend
-just frontend
-just pipeline-full
-```
+| Service | URL |
+|---|---|
+| Frontend | http://localhost:3000 |
+| Backend API | http://localhost:8000 |
+| Swagger UI | http://localhost:8000/docs |
+| Supabase Studio | http://127.0.0.1:54323 |
+| Supabase API | http://127.0.0.1:54321 |
