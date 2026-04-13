@@ -1,0 +1,132 @@
+[
+  {
+    "question": "Which countries are eligible to apply for a Working Holiday residence permit in the Netherlands?",
+    "user_info": {
+      "nationality": "Non-EU national",
+      "purpose_of_stay": "Other",
+      "employment_situation": "Not working / dependent on partner",
+      "registration_bsn_status": "Not yet arrived in the Netherlands",
+      "fiscal_partner": "No",
+      "gross_annual_salary": "Under €20,000"
+    },
+    "expected_answer": "You can only apply for a Working Holiday residence permit if you have the nationality or a passport of one of the following countries or territories: Argentina, Australia, Canada, Hong Kong, Japan, New Zealand, Taiwan, Uruguay, or South Korea. Citizens of any other nationality are not eligible.",
+    "url": "https://ind.nl/en/residence-permits/au-pair-and-exchange/residence-permit-working-holiday"
+  },
+  {
+    "question": "Do I need a work permit to work in the Netherlands during a short stay of less than 3 months?",
+    "user_info": {
+      "nationality": "EU/EEA citizen",
+      "purpose_of_stay": "Employed by Dutch/EU company",
+      "employment_situation": "Employed full-time",
+      "registration_bsn_status": "Not yet arrived in the Netherlands",
+      "fiscal_partner": "No",
+      "gross_annual_salary": "€40,000 - €60,000"
+    },
+    "expected_answer": "No, you do not need a work permit. EU, EEA and Swiss citizens can stay up to 3 months in the Netherlands without any additional requirements under the visa-exempt term. During this short stay, you are also free to work without needing a work permit (tewerkstellingsvergunning or TWV). You only need a valid travel document (passport or ID card) issued by an EU, EEA country or Switzerland.",
+    "url": "https://ind.nl/en/residence-permits/eu-eea-or-swiss-citizens/staying-in-the-netherlands-as-an-eu-eea-or-swiss-citizen"
+  },
+  {
+    "question": "How many years of valid Dutch residence must I have before I can apply for a permanent residence permit?",
+    "user_info": {
+      "nationality": "Non-EU national",
+      "purpose_of_stay": "Employed by Dutch/EU company",
+      "employment_situation": "Employed full-time",
+      "registration_bsn_status": "BRP registered at a municipality",
+      "fiscal_partner": "Yes",
+      "gross_annual_salary": "€40,000 - €60,000"
+    },
+    "expected_answer": "You must have had a valid Dutch residence permit for at least 5 consecutive years. Additionally, your main residence must have been in the Netherlands throughout that entire 5-year period, you must have always extended your residence permit on time, and you must have always met the requirements for your residence permit. Note that only years from the age of 8 onwards count towards the 5-year period.",
+    "url": "https://ind.nl/en/replace-extend-renew-and-change/permanent-residency/permanent-residence-permit"
+  },
+  {
+    "question": "From when can I apply to extend my regular temporary residence permit?",
+    "user_info": {
+      "nationality": "Non-EU national",
+      "purpose_of_stay": "Highly Skilled Migrant",
+      "employment_situation": "Employed full-time",
+      "registration_bsn_status": "Have a BSN number",
+      "fiscal_partner": "No",
+      "gross_annual_salary": "€80,000 - €100,000"
+    },
+    "expected_answer": "You can apply for an extension when your residence permit expires within 3 months. If your permit is still valid for more than 3 months, you cannot yet submit an extension application as the IND would be unable to make a proper assessment. It is important to apply while your permit is still valid; if it has just expired, you must submit the application no later than 4 weeks after the expiry date to avoid a residence gap.",
+    "url": "https://ind.nl/en/replace-extend-renew-and-change/extend-and-renew/regular-temporary-residence-permit-extension"
+  },
+  {
+    "question": "What is the legal decision period for a permanent residence permit application?",
+    "user_info": {
+      "nationality": "Non-EU national",
+      "purpose_of_stay": "Employed by Dutch/EU company",
+      "employment_situation": "Employed full-time",
+      "registration_bsn_status": "Have DigiD",
+      "fiscal_partner": "Yes",
+      "gross_annual_salary": "€60,000 - €80,000"
+    },
+    "expected_answer": "A legal decision period of 6 months applies to an application for a permanent residence permit or for a long-term EU resident status. This means the IND must decide on your application within 6 months from the start date of the decision period.",
+    "url": "https://ind.nl/en/after-your-application/decision-periods"
+  },
+  {
+    "question": "Where should I go for my biometrics appointment if I live in the province of Limburg?",
+    "user_info": {
+      "nationality": "Non-EU national",
+      "purpose_of_stay": "Self-employed / ZZP",
+      "employment_situation": "Self-employed / ZZP",
+      "registration_bsn_status": "BRP registered at a municipality",
+      "fiscal_partner": "No",
+      "gross_annual_salary": "€20,000 - €40,000"
+    },
+    "expected_answer": "If you live in the province of Limburg, you should make an appointment at the Expat Centre Maastricht. There, the IND will take a digital passport photo and take your fingerprints. Providing biometrics is free of charge, but you can only make an appointment after you have received a letter from the IND.",
+    "url": "https://ind.nl/en/after-your-application/biometrics-appointment-photo-signature-and-fingerprints"
+  },
+  {
+    "question": "After arriving in the Netherlands, within how many months must I register for healthcare insurance?",
+    "user_info": {
+      "nationality": "Non-EU national",
+      "purpose_of_stay": "Family reunification",
+      "employment_situation": "Not working / dependent on partner",
+      "registration_bsn_status": "Arrived, not yet registered",
+      "fiscal_partner": "Yes",
+      "gross_annual_salary": "Under €20,000"
+    },
+    "expected_answer": "Everyone who lives in the Netherlands must register for healthcare insurance within 4 months after their arrival in the Netherlands. An exception applies if you have a residence permit for study, Working Holiday (WHS/WHP) or cultural exchange — in that case, your foreign healthcare insurance is sufficient as long as it covers the Netherlands, unless you are also working in the Netherlands.",
+    "url": "https://ind.nl/en/living-in-the-netherlands-with-a-residence-permit/living-in-the-netherlands"
+  },
+  {
+    "question": "In which specific situation am I required to register with the IND?",
+    "user_info": {
+      "nationality": "EU/EEA citizen",
+      "purpose_of_stay": "Employed by Dutch/EU company",
+      "employment_situation": "Employed full-time",
+      "registration_bsn_status": "BRP registered at a municipality",
+      "fiscal_partner": "No",
+      "gross_annual_salary": "€40,000 - €60,000"
+    },
+    "expected_answer": "As a citizen of the EU, EEA or Switzerland, you generally do not need a residence permit and are not required to register with the IND. The only situation where registration with the IND is obligatory is if you have previously stayed in the Netherlands as a Union citizen but the IND ended that residency, and you are registered in the Personal Records Database (BRP) with code 41 — meaning you do not currently have the right of residency in the Netherlands.",
+    "url": "https://ind.nl/en/residence-permits/eu-eea-or-swiss-citizens/registering-with-the-ind-as-an-eu-eea-or-swiss-citizen"
+  },
+  {
+    "question": "What are the minimum thresholds to be considered 'economically active' and retain my right to stay in the Netherlands?",
+    "user_info": {
+      "nationality": "EU/EEA citizen",
+      "purpose_of_stay": "Employed by Dutch/EU company",
+      "employment_situation": "Employed part-time",
+      "registration_bsn_status": "BRP registered at a municipality",
+      "fiscal_partner": "No",
+      "gross_annual_salary": "€20,000 - €40,000"
+    },
+    "expected_answer": "To be considered economically active as an EU/EEA citizen in the Netherlands, your income must be at least 50% of the social assistance benefit amount applicable to you, or you must work at least 40% of the normal full working week. If your income is lower or you work fewer hours than these thresholds, your work may still qualify as genuine and effective — the IND will consider other factors such as whether your salary continues during holidays or illness.",
+    "url": "https://ind.nl/en/residence-permits/eu-eea-or-swiss-citizens/staying-in-the-netherlands-as-an-eu-eea-or-swiss-citizen"
+  },
+  {
+    "question": "I was living legally in the Netherlands before 1 January 2021. What condition on length of stay determines whether I qualify for temporary rather than permanent residency under the Brexit Withdrawal Agreement?",
+    "user_info": {
+      "nationality": "British (post-Brexit)",
+      "purpose_of_stay": "Employed by Dutch/EU company",
+      "employment_situation": "Employed full-time",
+      "registration_bsn_status": "BRP registered at a municipality",
+      "fiscal_partner": "No",
+      "gross_annual_salary": "€60,000 - €80,000"
+    },
+    "expected_answer": "To qualify for temporary residency under the Brexit Withdrawal Agreement, you must have been living legally in the Netherlands before 1 January 2021 and have been living in the Netherlands for less than 5 years according to EU rules or the Withdrawal Agreement at the time of your application. If you have already been living in the Netherlands for 5 years or more, you would instead be eligible to apply directly for permanent residency based on the Withdrawal Agreement.",
+    "url": "https://ind.nl/en/residence-permits/withdrawal-agreement-brexit/temporary-residency-based-on-withdrawal-agreement"
+  }
+]
