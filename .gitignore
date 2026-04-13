@@ -43,3 +43,6 @@ data_pipeline/data/documents.jsonl
 
 # Local planning docs
 docs/plans/
+
+# Log files
+logs/
