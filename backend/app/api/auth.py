@@ -23,16 +23,21 @@ def register(body: RegisterRequest):
         .eq("username", body.username)
         .execute()
     )
+    print("sukkka")
     if existing.data:
         logger.warning("username_already_exists", username=body.username)
         raise HTTPException(status_code=409, detail="Username already taken")
 
     password_hash = bcrypt.hashpw(body.password.encode(), bcrypt.gensalt()).decode()
+    print("sukkka0.5")
+
     result = (
         supabase.table("users")
         .insert({"username": body.username, "password": password_hash})
         .execute()
     )
+    print("sukkka1")
+
     user = result.data[0]
     logger.info("user_created_successfully", user_id=user["id"], username=user["username"])
     return {"id": user["id"], "username": user["username"]}
