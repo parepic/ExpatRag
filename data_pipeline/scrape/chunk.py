@@ -1,32 +1,35 @@
 """Chunk source content and store embeddings in `document_chunks`."""
 
 from __future__ import annotations
-from lib.supabase_client import get_supabase_client
-from lib.embeddings import get_embeddings
+
+import argparse
+import re
+import sys
+from collections.abc import Iterable, Iterator
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+_pipeline_root = Path(__file__).resolve().parents[1]
+if str(_pipeline_root) not in sys.path:
+    sys.path.insert(0, str(_pipeline_root))
+
+from langchain_core.documents import Document
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from supabase import Client
+
 from lib.config import (
+    CHUNK_DB_BATCH_SIZE,
     CHUNK_DRY_RUN,
     CHUNK_EMBEDDING_MODEL,
     CHUNK_LIMIT,
+    CHUNK_SOURCE_ID,
     CHUNK_OVERLAP,
     CHUNK_OVERRIDE_CHUNKS,
     CHUNK_SIZE,
-    CHUNK_SOURCE_ID,
-    CHUNK_DB_BATCH_SIZE,
 )
-from supabase import Client
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_core.documents import Document
-from typing import Any
-from dataclasses import dataclass
-from collections.abc import Iterable, Iterator
-import re
-
-import sys
-from pathlib import Path
-
-_pipeline_root = Path(__file__).resolve().parent.parent
-if str(_pipeline_root) not in sys.path:
-    sys.path.insert(0, str(_pipeline_root))
+from lib.supabase_client import get_supabase_client
+from scrape.embeddings import get_embeddings
 
 
 @dataclass(slots=True)
@@ -266,10 +269,43 @@ def chunk_sources(
 
 
 def main() -> None:
-    """Run the chunking task using values from config."""
-    stats = chunk_sources()
+    """Run the chunking task using config defaults plus optional CLI overrides."""
+    parser = argparse.ArgumentParser(
+        description="Chunk stored sources and write embeddings to document_chunks."
+    )
+    parser.add_argument(
+        "--source-id",
+        default=CHUNK_SOURCE_ID,
+        help="Only chunk one source UUID.",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=CHUNK_LIMIT,
+        help="Maximum number of source rows to process.",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        default=CHUNK_DRY_RUN,
+        help="Compute chunks but do not write to Supabase.",
+    )
+    parser.add_argument(
+        "--override-chunks",
+        action="store_true",
+        default=CHUNK_OVERRIDE_CHUNKS,
+        help="Replace existing chunks for processed sources.",
+    )
+    args = parser.parse_args()
 
-    if CHUNK_DRY_RUN:
+    stats = chunk_sources(
+        source_id=args.source_id,
+        limit=args.limit,
+        dry_run=args.dry_run,
+        override_chunks=args.override_chunks,
+    )
+
+    if args.dry_run:
         print(
             "Dry run completed: "
             f"sources_processed={stats.sources_processed}, "

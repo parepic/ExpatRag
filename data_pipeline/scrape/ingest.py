@@ -1,25 +1,29 @@
-"""Ingest pipeline: scrape → JSONL → Supabase, or JSONL → Supabase when skipping fetch."""
+"""Ingest pipeline: scrape to JSONL and optionally store documents in Supabase."""
 
 from __future__ import annotations
-from lib.store import store_documents
-from lib.jsonl import load_documents_from_jsonl, write_documents_jsonl
-from lib.fetcher import fetch_pages
-from lib.extractor import extract_documents
-from lib.discovery import discover_pages
-from lib.config import DOCUMENTS_JSONL_PATH, PAGE_LIMIT
 
 import argparse
 import sys
 from pathlib import Path
 
-_pipeline_root = Path(__file__).resolve().parent.parent
+_pipeline_root = Path(__file__).resolve().parents[1]
 if str(_pipeline_root) not in sys.path:
     sys.path.insert(0, str(_pipeline_root))
 
+from lib.config import DOCUMENTS_JSONL_PATH, PAGE_LIMIT
+from lib.jsonl import load_documents_from_jsonl, write_documents_jsonl
+from scrape.discovery import discover_pages
+from scrape.extractor import extract_documents
+from scrape.fetcher import fetch_pages
+from scrape.store import store_documents
 
-def ingest(*, skip_data_fetch: bool) -> None:
+
+def ingest(*, skip_data_fetch: bool, store: bool = True) -> None:
     if not skip_data_fetch:
-        print("Mode: discover → fetch → extract → write JSONL → store")
+        mode = "discover → fetch → extract → write JSONL"
+        if store:
+            mode += " → store"
+        print(f"Mode: {mode}")
         pages = discover_pages()
         if PAGE_LIMIT is not None:
             pages = pages[:PAGE_LIMIT]
@@ -34,7 +38,10 @@ def ingest(*, skip_data_fetch: bool) -> None:
         )
         documents = load_documents_from_jsonl(DOCUMENTS_JSONL_PATH)
 
-    store_documents(documents)
+    if store:
+        store_documents(documents)
+    else:
+        print("Skipping Supabase store (--skip-store).")
 
 
 def main() -> None:
@@ -46,8 +53,13 @@ def main() -> None:
         action="store_true",
         help=f"Skip scrape; load from {DOCUMENTS_JSONL_PATH} and upsert into Supabase.",
     )
+    parser.add_argument(
+        "--skip-store",
+        action="store_true",
+        help="Write/load JSONL but do not upsert documents into Supabase.",
+    )
     args = parser.parse_args()
-    ingest(skip_data_fetch=args.skip_data_fetch)
+    ingest(skip_data_fetch=args.skip_data_fetch, store=not args.skip_store)
     print("Ingest complete")
 
 
