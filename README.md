@@ -54,7 +54,7 @@ LANGSMITH_API_KEY=
 LANGSMITH_TRACING=true
 LANGSMITH_PROJECT=expatrag
 
-# Required only if running the web scraper (not needed for ingest-from-json)
+# Required only if running the web scraper (not needed for store-pages)
 SCRAPE_DO_TOKEN=
 ```
 
@@ -77,16 +77,25 @@ The database needs data before the app is useful — see **Data Pipeline** below
 
 ## Data Pipeline
 
-Scrapes IND.nl, stores pages in Supabase, then chunks and embeds them.
+Scrapes IND.nl into JSONL, stores pages in Supabase, chunks and embeds them, then fetches IamExpat RSS news, classifies alert-worthy items, and stores selected news in Supabase.
 
 ```bash
-just pipeline-full       # full flow: scrape → store → chunk
-just ingest              # scrape → JSONL → store (no chunking)
-just ingest-from-json    # load from existing JSONL → store (no HTTP requests)
+just pipeline-full       # full flow: pages scrape → store → chunk, then news fetch → classify → store
+just scrape-pages        # scrape → JSONL only (no DB writes)
+just store-pages         # existing page JSONL → Supabase sources table
 just chunk-pages         # chunk and embed already-stored pages
+just fetch-news          # IamExpat RSS → data_pipeline/data/news_items.jsonl
+just store-news          # classify JSONL news and store alert-worthy items
 ```
 
-`data_pipeline/data/documents.jsonl` contains a pre-scraped snapshot, so you can run `just ingest-from-json && just chunk-pages` without needing a `SCRAPE_DO_TOKEN`.
+`data_pipeline/data/documents.jsonl` contains a pre-scraped snapshot, so you can run `just store-pages && just chunk-pages` without needing a `SCRAPE_DO_TOKEN`.
+
+News fetch currently reads the IamExpat RSS feed and writes normalized items published today:
+
+```bash
+uv run --package data-pipeline python3 data_pipeline/news/ingest.py --date 2026-05-14
+uv run --package data-pipeline python3 data_pipeline/news/ingest.py --include-all
+```
 
 ## Testing
 

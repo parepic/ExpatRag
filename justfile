@@ -14,18 +14,26 @@ backend:
 frontend:
     cd frontend && pnpm dev
 
-# Full pipeline: ingest (scrape → JSONL → store) → chunk
+# Full pipeline: scrape pages → store → chunk, then fetch/classify/store news
 pipeline-full:
-    uv run --package data-pipeline python3 data_pipeline/pipeline.py
+    uv run --package data-pipeline python3 data_pipeline/scrape/pipeline.py
 
-# Ingest from JSONL only → store (no HTTP)
-ingest-from-json:
-    uv run --package data-pipeline python3 data_pipeline/ingest.py --skip-data-fetch
+# Store existing page JSONL → Supabase sources table (no HTTP)
+store-pages:
+    uv run --package data-pipeline python3 data_pipeline/scrape/ingest.py --skip-data-fetch
 
-# Ingest only (scrape → data_pipeline/data/documents.jsonl → store)
-ingest:
-    uv run --package data-pipeline python3 data_pipeline/ingest.py
+# Scrape pages → data_pipeline/data/documents.jsonl (no DB writes)
+scrape-pages:
+    uv run --package data-pipeline python3 data_pipeline/scrape/ingest.py --skip-store
+
+# Fetch today's IamExpat RSS news → data_pipeline/data/news_items.jsonl
+fetch-news:
+    uv run --package data-pipeline python3 data_pipeline/news/ingest.py
+
+# Classify existing news JSONL and store alert-worthy items → Supabase news_items
+store-news:
+    uv run --package data-pipeline python3 data_pipeline/news/store.py
 
 # Chunk sources only (no ingest)
 chunk-pages:
-    uv run --package data-pipeline python3 data_pipeline/chunk.py
+    uv run --package data-pipeline python3 data_pipeline/scrape/chunk.py

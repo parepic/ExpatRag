@@ -5,3 +5,6 @@ requires-python = ">=3.12"
 
 [tool.uv.workspace]
 members = ["backend", "data_pipeline"]
+
+[dependency-groups]
+dev = []
