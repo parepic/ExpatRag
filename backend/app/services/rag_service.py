@@ -151,7 +151,7 @@ def _generate_query_variations(user_query: str, num_queries: int = 3) -> list[st
     """
     system_prompt = f"""Generate {num_queries-1} alternative ways to phrase this questions for document search. Use different keywords and synonyms while maintaining the same intent. Return exactly {num_queries-1} variations."""
 
-    logger.info("generating_query_variations", requested_count=num_queries, returned_count=len(result.variations) + 1)
+    logger.info("generating_query_variations", requested_count=num_queries)
     try:
         messages = [
             SystemMessage(content=system_prompt),
@@ -227,7 +227,46 @@ def _build_chat_history(history: list[dict]) -> list[HumanMessage | AIMessage]:
     return messages
 
 
-def generate_rag_reply(
+def retrieve_rag_context_for_agent(
+    user_id: str,
+    question: str,
+) -> tuple[str, list[dict], str]:
+    """Retrieve context/citations for agent tools without running final legacy generation."""
+    logger.info(
+        "rag_context_retrieval_for_agent_started",
+        user_id=user_id,
+        retrieval_strategy=SEARCH_STRATEGY,
+    )
+    retrieval_function = _get_retrieval_function(SEARCH_STRATEGY)
+    chunks = retrieval_function(question)
+
+    context = _build_context(chunks)
+    user_profile = _load_user_profile(user_id)
+    user_profile_text = _format_user_profile(user_profile)
+
+    citations = [
+        {
+            "chunk_ref": idx,
+            "chunk_id": str(chunk.get("id", "")),
+            "source_id": str(chunk.get("source_id", "")),
+            "source_title": chunk.get("source_title"),
+            "source_url": chunk.get("source_url"),
+            "page_number": chunk.get("page_number"),
+            "similarity": chunk.get("similarity"),
+        }
+        for idx, chunk in enumerate(chunks, start=1)
+    ]
+
+    logger.info(
+        "rag_context_retrieval_for_agent_completed",
+        user_id=user_id,
+        retrieved_chunk_count=len(chunks),
+        citation_count=len(citations),
+    )
+    return context, citations, user_profile_text
+
+
+def _generate_rag_reply_legacy(
     user_id: str,
     question: str,
     chat_history: list[dict] | None = None,
@@ -328,3 +367,23 @@ def generate_rag_reply(
     ]
     # logger.info("rag_reply_generated", used_chunk_ref_count=len(valid_used_chunk_refs), citation_count=len(citations))
     return reply_text, citations
+
+
+def generate_rag_reply(
+    user_id: str,
+    question: str,
+    chat_history: list[dict] | None = None,
+) -> tuple[str, list[dict]]:
+    # """Generate a reply using the simple agent (hardcoded for now)."""
+    # logger.info("rag_reply_generation_via_simple_agent", user_id=user_id)
+    # from app.agents.simple_agent.simple_agent import run_simple_agent_reply
+    """Generate a reply using the supervisor agent (hardcoded for now)."""
+    logger.info("rag_reply_generation_via_supervisor_agent", user_id=user_id)
+    from app.agents.supervisor_agent.supervisor_agent import run_supervisor_agent_reply
+
+    return run_supervisor_agent_reply(
+        user_id=user_id,
+        question=question,
+        chat_history=chat_history,
+        model=LLM_MODEL,
+    )
