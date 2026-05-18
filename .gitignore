@@ -39,10 +39,10 @@ CLAUDE.md
 AGENTS.md
 
 # Data pipeline local snapshot
-data_pipeline/data/documents.jsonl
+data_pipeline/data/*
 
 # Local planning docs
-docs/plans/
+# docs/plans/
 
 # Log files
 logs/
