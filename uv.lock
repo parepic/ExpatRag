@@ -630,6 +630,11 @@ dependencies = [
     { name = "unstructured" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "langchain-openai", specifier = ">=0.3.12" },
@@ -642,6 +647,9 @@ requires-dist = [
     { name = "supabase" },
     { name = "unstructured" },
 ]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=8.0" }]
 
 [[package]]
 name = "deprecation"

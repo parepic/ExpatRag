@@ -42,7 +42,7 @@ AGENTS.md
 data_pipeline/data/*
 
 # Local planning docs
-# docs/plans/
+docs/plans/
 
 # Log files
 logs/
