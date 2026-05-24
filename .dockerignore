@@ -1,0 +1,43 @@
+.git/
+.agents/
+.codex/
+.claude/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+
+# Node
+node_modules/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+.pnpm-store/
+
+# Environment and local-only files
+.env
+.env.*
+!.env.example
+logs/
+notebooks/
+
+# Local pipeline outputs; mounted at runtime when needed
+data_pipeline/data/*.jsonl
+data_pipeline/data/dumps/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
