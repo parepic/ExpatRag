@@ -40,7 +40,7 @@ AGENTS.md
 
 # Data pipeline local snapshot
 data_pipeline/data/documents.jsonl
-data_pipeline/data/dumps/news_items.jsonl
+data_pipeline/data/news_items.jsonl
 
 
 # Local planning docs
