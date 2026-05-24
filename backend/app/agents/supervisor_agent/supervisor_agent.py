@@ -356,7 +356,70 @@ For every user question:
     return agent
 
 
+# =============================================================================
+# WEB SEARCH AGENT
+# =============================================================================
 
+def create_web_search_agent(model: str = "gpt-4o-mini", use_tavily: bool = True):
+    """
+    Create an agent with web search capabilities.
+
+    This agent is specialized for searching the internet for current information.
+    It uses Tavily as the web search backend.
+    
+    Args:
+        model: The OpenAI model to use (default: "gpt-4o-mini")
+        use_tavily: Kept for compatibility; Tavily is the only supported backend.
+        
+    Returns:
+        A configured LangGraph agent for web search
+    """
+    if not os.getenv("TAVILY_API_KEY"):
+        raise RuntimeError("TAVILY_API_KEY must be set for web search")
+
+    tavily_module = importlib.import_module("langchain_tavily")
+    search_tool = tavily_module.TavilySearch(max_results=5, search_depth="advanced")
+    logger.info("supervisor_web_search_using_tavily")
+    
+    tools = [search_tool]
+
+    current_date = datetime.now().strftime("%B %d, %Y")
+    
+    system_prompt = f"""You are a specialized web search assistant.
+Your job is to search the internet for current information and provide accurate, up-to-date answers.
+
+**Current Date: {current_date}**
+
+For every query you receive:
+1. **Reformulate vague queries into specific search terms** before searching
+2. Use the web search tool with clear, specific queries
+3. Synthesize information from multiple search results when possible
+4. Provide clear, factual answers with context
+5. Indicate the recency and reliability of information when relevant
+
+**Query Reformulation Examples:**
+- "What's trending on social media today?" → Try: "Twitter trending topics today" OR "viral news today"
+- "Today's top headlines" → Try: "breaking news today" OR "top news stories {current_date}"
+- "What's happening in tech?" → Try: "latest tech news today" OR "technology headlines today"
+- Add date context when relevant (e.g., "news {current_date}")
+
+**If initial search returns insufficient or irrelevant results:**
+1. Rephrase the query with more specific terms (e.g., add location, date, or focus area)
+2. Try searching with alternative keywords or synonyms
+3. Make 2-3 search attempts with different query formulations if needed
+4. If still unsuccessful, clearly state what you found vs. what was requested
+
+Focus on current events, general knowledge, and information not available in internal documents.
+Never fabricate information - only use what's found in search results."""
+    
+    agent = create_agent(
+        model=model,
+        tools=tools,
+        system_prompt=system_prompt,
+        state_schema=CustomAgentState
+    )
+    
+    return agent
 
 
 # =============================================================================
@@ -382,6 +445,7 @@ def create_supervisor_tools(project_id: str, model: str = "gpt-4o-mini"):
     """
     # Create the specialized agents
     rag_agent = create_rag_agent(project_id, model)
+    web_agent = create_web_search_agent(model)
     
     @tool
     def rag_search(
@@ -438,6 +502,7 @@ def create_supervisor_tools(project_id: str, model: str = "gpt-4o-mini"):
             }
         )
     
+    @tool
     def search_web(query: str) -> str:
         """Search the internet for current information.
         
@@ -481,7 +546,7 @@ def create_supervisor_tools(project_id: str, model: str = "gpt-4o-mini"):
         )
         return response
     
-    return [rag_search]
+    return [rag_search, search_web]
 
 
 # =============================================================================
