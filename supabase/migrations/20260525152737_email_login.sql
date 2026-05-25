@@ -1,0 +1,2 @@
+-- Add email column to users table for email-based login
+ALTER TABLE users ADD COLUMN email TEXT UNIQUE NOT NULL DEFAULT '';
