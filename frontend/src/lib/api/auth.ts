@@ -10,14 +10,14 @@ export class ApiError extends Error {
 }
 
 export async function login(
-  username: string,
+  email: string,
   password: string,
 ): Promise<void> {
   const res = await fetch(`${API_BASE}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ email, password }),
   });
   if (!res.ok) {
     const body = await res.json().catch(() => null);
@@ -26,14 +26,14 @@ export async function login(
 }
 
 export async function register(
-  username: string,
+  email: string,
   password: string,
 ): Promise<void> {
   const res = await fetch(`${API_BASE}/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ email, password }),
   });
   if (!res.ok) {
     const body = await res.json().catch(() => null);

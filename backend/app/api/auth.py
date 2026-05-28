@@ -16,40 +16,40 @@ logger = get_logger(__name__)
 
 @router.post("/register", status_code=201)
 def register(body: RegisterRequest):
-    logger.info("creating_user", username=body.username)
+    logger.info("creating_user", email=body.email)
     existing = (
         supabase.table("users")
         .select("id")
-        .eq("username", body.username)
+        .eq("email", body.email)
         .execute()
     )
     print("sukkka")
     if existing.data:
-        logger.warning("username_already_exists", username=body.username)
-        raise HTTPException(status_code=409, detail="Username already taken")
+        logger.warning("account_already_exists", email=body.email)
+        raise HTTPException(status_code=409, detail="An account already exists with this email.")
 
     password_hash = bcrypt.hashpw(body.password.encode(), bcrypt.gensalt()).decode()
     print("sukkka0.5")
 
     result = (
         supabase.table("users")
-        .insert({"username": body.username, "password": password_hash})
+        .insert({"email": body.email, "password": password_hash})
         .execute()
     )
     print("sukkka1")
 
     user = result.data[0]
-    logger.info("user_created_successfully", user_id=user["id"], username=user["username"])
-    return {"id": user["id"], "username": user["username"]}
+    logger.info("user_created_successfully", user_id=user["id"], email=user["email"])
+    return {"id": user["id"], "email": user["email"]}
 
 
 @router.post("/login")
 def login(body: LoginRequest, response: Response):
-    logger.info("login_attempt", username=body.username)
+    logger.info("login_attempt", email=body.email)
     result = (
         supabase.table("users")
         .select("id, password")
-        .eq("username", body.username)
+        .eq("email", body.email)
         .execute()
     )
     user = result.data[0] if result.data else None
@@ -58,7 +58,7 @@ def login(body: LoginRequest, response: Response):
     password_ok = bcrypt.checkpw(body.password.encode(), stored_hash.encode())
 
     if not user or not password_ok:
-        logger.warning("invalid_credentials", username=body.username)
+        logger.warning("invalid_credentials", email=body.email)
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     set_user_id(user["id"])

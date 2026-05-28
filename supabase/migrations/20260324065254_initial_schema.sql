@@ -5,7 +5,7 @@ CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    username TEXT UNIQUE NOT NULL,
+    -- username TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL, -- stores bcrypt hash, never plaintext
     nationality TEXT,
     purpose_of_stay TEXT,
