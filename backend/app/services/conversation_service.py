@@ -4,7 +4,7 @@ from fastapi import HTTPException
 
 from app.core.logging import get_logger
 from app.core.supabase_client import supabase
-from app.services.rag_service import generate_rag_reply
+from app.services.rag_service import generate_rag_reply, _load_project_settings
 
 
 logger = get_logger(__name__)
@@ -85,9 +85,11 @@ def create_chat(user_id: str, message: str) -> dict:
     logger.info("chat_record_created", user_id=user_id, chat_id=chat_id)
     user_message = _store_user_message(user_id=user_id, chat_id=chat_id, message=message)
 
+    project_settings = _load_project_settings(user_id)
     reply_text, citations = generate_rag_reply(
         user_id=user_id,
         question=message,
+        agent_type=project_settings.get("agent_type"),
         chat_history=[],
     )
     logger.info("rag_reply_generated", user_id=user_id, chat_id=chat_id, citation_count=len(citations))
@@ -124,11 +126,14 @@ def add_chat_message(user_id: str, chat_id: str, message: str) -> dict:
     chat_history = _load_chat_history(chat_id)
     prior_messages = chat_history[:-1] if chat_history else []
 
+    project_settings = _load_project_settings(user_id)
     reply_text, citations = generate_rag_reply(
         user_id=user_id,
         question=message,
-        chat_history=prior_messages,
+        agent_type=project_settings.get("agent_type"),
+        chat_history=[],
     )
+
     logger.info("rag_reply_generated", user_id=user_id, chat_id=chat_id, citation_count=len(citations))
     assistant_message = _store_assistant_message(
         chat_id=chat_id,

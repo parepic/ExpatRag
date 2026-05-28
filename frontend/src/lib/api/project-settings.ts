@@ -18,3 +18,19 @@ export async function updateProjectSettings(
     throw new ApiError(res.status, body?.detail ?? "Failed to update project settings");
   }
 }
+
+export async function getProjectSettings(): Promise<ProjectSettings> {
+  const res = await fetch(`${API_BASE}/users/retrieval`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new ApiError(res.status, body?.detail ?? "Failed to fetch project settings");
+  }
+
+  const data = await res.json().catch(() => ({} as ProjectSettings));
+  return data as ProjectSettings;
+}
