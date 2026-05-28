@@ -1,11 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Info } from "lucide-react";
 import type { ProjectSettings } from "@/lib/types/project-settings";
-import { updateProjectSettings } from "@/lib/api/project-settings";
+import {
+  updateProjectSettings,
+  getProjectSettings,
+} from "@/lib/api/project-settings";
 
 const RAG_STRATEGY_OPTIONS = [
   { value: "vector search", label: "Vector search" },
@@ -42,6 +45,7 @@ const DEFAULT_SETTINGS: ProjectSettings = {
   similarity_threshold: 0.5,
   number_of_queries: 3,
   vector_weight: 0.5,
+  keyword_weight: 0.5,
 };
 
 export default function RetrievalSettingsPage() {
@@ -51,6 +55,8 @@ export default function RetrievalSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const showNumberOfQueries = useMemo(
     () => settings.rag_strategy.includes("multi query"),
@@ -79,8 +85,14 @@ export default function RetrievalSettingsPage() {
 
       if (!nextValue.includes("hybrid")) {
         delete updated.vector_weight;
+        delete updated.keyword_weight;
       } else if (!updated.vector_weight) {
         updated.vector_weight = 0.5;
+        updated.keyword_weight = 0.5;
+      } else {
+        updated.keyword_weight = Number(
+          (1.0 - updated.vector_weight).toFixed(1),
+        );
       }
 
       return updated;
@@ -88,17 +100,43 @@ export default function RetrievalSettingsPage() {
   };
 
   const updateVectorWeight = (nextValue: number) => {
+    const vector = Number(nextValue.toFixed(1));
     setSettings((currentSettings) => ({
       ...currentSettings,
-      vector_weight: Number(nextValue.toFixed(1)),
+      vector_weight: vector,
+      keyword_weight: Number((1.0 - vector).toFixed(1)),
     }));
+  };
+
+  const buildSavePayload = (current: ProjectSettings): ProjectSettings => {
+    const payload: ProjectSettings = { ...current };
+    const strategy = payload.rag_strategy ?? "";
+
+    if (strategy.includes("hybrid")) {
+      const vector = Number((payload.vector_weight ?? 0.5).toFixed(1));
+      payload.vector_weight = vector;
+      payload.keyword_weight = Number((1.0 - vector).toFixed(1));
+    } else {
+      delete payload.vector_weight;
+      delete payload.keyword_weight;
+    }
+
+    if (!strategy.includes("multi query")) {
+      delete payload.number_of_queries;
+    } else if (!payload.number_of_queries) {
+      payload.number_of_queries = 3;
+    }
+
+    return payload;
   };
 
   const handleSaveDraft = async () => {
     setIsSaving(true);
     setSaveError(null);
     try {
-      await updateProjectSettings(settings);
+      const payload = buildSavePayload(settings);
+      await updateProjectSettings(payload);
+      setSettings((prev) => ({ ...prev, ...payload }));
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (err: unknown) {
@@ -111,6 +149,46 @@ export default function RetrievalSettingsPage() {
       setIsSaving(false);
     }
   };
+
+  useEffect(() => {
+    let mounted = true;
+    setIsLoading(true);
+    setLoadError(null);
+
+    getProjectSettings()
+      .then((data) => {
+        if (!mounted) return;
+        const merged: ProjectSettings = {
+          ...DEFAULT_SETTINGS,
+          ...data,
+          rag_strategy: data.rag_strategy ?? DEFAULT_SETTINGS.rag_strategy,
+          agent_type: data.agent_type ?? DEFAULT_SETTINGS.agent_type,
+          chunks_per_search:
+            data.chunks_per_search ?? DEFAULT_SETTINGS.chunks_per_search,
+          final_context_size:
+            data.final_context_size ?? DEFAULT_SETTINGS.final_context_size,
+          similarity_threshold:
+            data.similarity_threshold ?? DEFAULT_SETTINGS.similarity_threshold,
+        };
+
+        const payload = buildSavePayload(merged);
+        setSettings(payload);
+      })
+      .catch((err: unknown) => {
+        const msg =
+          err instanceof Error
+            ? err.message
+            : String(err ?? "Failed to load settings");
+        if (mounted) setLoadError(msg);
+      })
+      .finally(() => {
+        if (mounted) setIsLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return (
     <main className="px-6 py-8">
@@ -507,13 +585,22 @@ export default function RetrievalSettingsPage() {
               {saveError ? (
                 <p className="text-xs text-destructive">{saveError}</p>
               ) : null}
+              {loadError ? (
+                <p className="text-xs text-destructive">{loadError}</p>
+              ) : null}
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleSaveDraft}
-                disabled={isSaving}
+                disabled={isSaving || isLoading}
               >
-                {isSaving ? "Saving..." : saved ? "Saved" : "Save draft"}
+                {isSaving
+                  ? "Saving..."
+                  : saved
+                    ? "Saved"
+                    : isLoading
+                      ? "Loading..."
+                      : "Save draft"}
               </Button>
             </div>
           </div>
