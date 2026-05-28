@@ -55,3 +55,25 @@ def update_retrieval_settings(
     return updated
 
 
+@router.get("/retrieval")
+def get_retrieval_settings(
+    user: dict = Depends(get_current_user),
+):
+    logger.info("fetching_retrieval_settings", user_id=user["id"])
+    result = (
+        supabase.table("project_settings")
+        .select("*")
+        .eq("user_id", user["id"])
+        .limit(1)
+        .execute()
+    )
+    data = result.data or []
+    if not data:
+        logger.info("no_project_settings_found", user_id=user["id"])
+        return {}
+
+    settings = data[0]
+    logger.info("project_settings_fetched", user_id=user["id"])
+    return settings
+
+
