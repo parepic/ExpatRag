@@ -4,16 +4,8 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Info } from "lucide-react";
-
-type RetrievalSettings = {
-  rag_strategy: string;
-  agent_type: string;
-  chunks_per_search: number;
-  final_context_size: number;
-  similarity_threshold: number;
-  number_of_queries?: number;
-  vector_weight?: number;
-};
+import type { ProjectSettings } from "@/lib/types/project-settings";
+import { updateProjectSettings } from "@/lib/api/project-settings";
 
 const RAG_STRATEGY_OPTIONS = [
   { value: "vector search", label: "Vector search" },
@@ -42,7 +34,7 @@ const SEARCH_STRATEGY_INFO: Record<string, string> = {
     "Uses multiple versions of your question with both keyword and meaning-based search for broader and more reliable results.",
 };
 
-const DEFAULT_SETTINGS: RetrievalSettings = {
+const DEFAULT_SETTINGS: ProjectSettings = {
   rag_strategy: "vector search",
   agent_type: "simple",
   chunks_per_search: 5,
@@ -53,9 +45,12 @@ const DEFAULT_SETTINGS: RetrievalSettings = {
 };
 
 export default function RetrievalSettingsPage() {
-  const [settings, setSettings] = useState<RetrievalSettings>(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState<ProjectSettings>(DEFAULT_SETTINGS);
   const [showStrategyInfo, setShowStrategyInfo] = useState(false);
   const [rerankingEnabled, setRerankingEnabled] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const showNumberOfQueries = useMemo(
     () => settings.rag_strategy.includes("multi query"),
@@ -97,6 +92,24 @@ export default function RetrievalSettingsPage() {
       ...currentSettings,
       vector_weight: Number(nextValue.toFixed(1)),
     }));
+  };
+
+  const handleSaveDraft = async () => {
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      await updateProjectSettings(settings);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : String(err ?? "Failed to save settings");
+      setSaveError(msg);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -490,9 +503,19 @@ export default function RetrievalSettingsPage() {
                 schema and can be wired to persistence later.
               </p>
             </div>
-            <Button type="button" variant="outline">
-              Save draft
-            </Button>
+            <div className="flex flex-col items-end gap-2">
+              {saveError ? (
+                <p className="text-xs text-destructive">{saveError}</p>
+              ) : null}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleSaveDraft}
+                disabled={isSaving}
+              >
+                {isSaving ? "Saving..." : saved ? "Saved" : "Save draft"}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
