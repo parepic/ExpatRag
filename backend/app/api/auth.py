@@ -39,7 +39,29 @@ def register(body: RegisterRequest):
     print("sukkka1")
 
     user = result.data[0]
+    
+
+    logger.info("creating_default_project_settings", email=body.email)
+    project_result = supabase.table('project_settings').insert({
+        "user_id": user["id"], # get the uuid of the newly created user
+        "rag_strategy": "vector",
+        "agent_type": "simple",
+        "chunks_per_search": 5,
+        "final_context_size": 5,
+        "similarity_threshold": 0.3,
+        "number_of_queries": 3,
+        "reranking_enabled": True,
+        "vector_weight": 0.7,
+        "keyword_weight": 0.3,
+    }).execute()
+    if not project_result.data:
+        logger.error("project_settings_creation_failed", reason="no_data_returned")
+        # Rollback
+        supabase.table("users").delete().eq("id", user["id"]).execute()
+        raise HTTPException(status_code=422, detail=f"Failed to create project settings. User registration rolled back.")
+        
     logger.info("user_created_successfully", user_id=user["id"], email=user["email"])
+
     return {"id": user["id"], "email": user["email"]}
 
 
