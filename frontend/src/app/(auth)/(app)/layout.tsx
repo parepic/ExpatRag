@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowLeft, ChevronRight, Settings } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronRight,
+  Search,
+  Settings,
+  Settings2,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ChatProvider, useChatContext } from "@/context/ChatContext";
@@ -16,6 +22,25 @@ type Breadcrumb = {
   muted: boolean;
 };
 
+type SettingsNavItem = {
+  href: string;
+  label: string;
+  icon: typeof Settings2;
+};
+
+const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
+  {
+    href: "/settings/user",
+    label: "User settings",
+    icon: Settings2,
+  },
+  {
+    href: "/settings/retrieval",
+    label: "Retrieval settings",
+    icon: Search,
+  },
+];
+
 function truncateTitle(title: string, maxLength: number) {
   if (title.length <= maxLength) {
     return title;
@@ -28,30 +53,29 @@ function isSettingsRoute(pathname: string) {
   return pathname.startsWith("/settings");
 }
 
+function getSettingsPageTitle(pathname: string) {
+  if (pathname.startsWith("/settings/retrieval")) {
+    return "Retrieval settings";
+  }
+
+  return "User settings";
+}
+
 function getBreadcrumbs(pathname: string): Breadcrumb[] {
   if (pathname === "/chat") {
     return [{ label: "Chat with Patty", muted: false }];
   }
 
   if (pathname.startsWith("/settings/")) {
-    const pageName = pathname
-      .split("/settings/")[1]
-      .split("/")
-      .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-      .join(" ");
-
-    return [
-      { label: "Settings", muted: true },
-      { label: pageName, muted: false },
-    ];
+    return [{ label: getSettingsPageTitle(pathname), muted: false }];
   }
 
-  return [{ label: "Settings", muted: false }];
+  return [{ label: "User settings", muted: false }];
 }
 
 function AppShell({ children }: AppLayoutProps) {
   const pathname = usePathname();
-  const inSettings = isSettingsRoute(pathname);
+  const isInSettingsRoute = isSettingsRoute(pathname);
   const breadcrumbs = getBreadcrumbs(pathname);
   const { activeChatId, chats, setActiveChatId } = useChatContext();
 
@@ -59,7 +83,10 @@ function AppShell({ children }: AppLayoutProps) {
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
       <aside
         className="flex shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground"
-        style={{ width: "var(--sidebar-width)", minWidth: "var(--sidebar-width)" }}
+        style={{
+          width: "var(--sidebar-width)",
+          minWidth: "var(--sidebar-width)",
+        }}
       >
         <div className="border-b border-sidebar-border px-4 py-4">
           <Link href="/chat" className="text-lg font-bold tracking-tight">
@@ -68,7 +95,7 @@ function AppShell({ children }: AppLayoutProps) {
         </div>
 
         <nav className="border-b border-sidebar-border px-3 py-3">
-          {inSettings ? (
+          {isInSettingsRoute ? (
             <>
               <Link
                 href="/chat"
@@ -77,22 +104,32 @@ function AppShell({ children }: AppLayoutProps) {
                 <ArrowLeft className="size-4" />
                 Back to Patty
               </Link>
-              <div className="mt-2">
-                <Link
-                  href="/settings/profile"
-                  className={`block rounded px-2 py-1.5 text-sm transition-colors ${
-                    pathname === "/settings/profile"
-                      ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                      : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                  }`}
-                >
-                  Profile
-                </Link>
+              <div className="mt-2 space-y-0.5">
+                {SETTINGS_NAV_ITEMS.map((item) => {
+                  const isActiveItem =
+                    pathname === item.href ||
+                    pathname.startsWith(`${item.href}/`);
+
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`flex items-center gap-2 rounded px-2 py-1.5 text-sm transition-colors ${
+                        isActiveItem
+                          ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                          : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      }`}
+                    >
+                      <item.icon className="size-4" />
+                      {item.label}
+                    </Link>
+                  );
+                })}
               </div>
             </>
           ) : (
             <Link
-              href="/settings/profile"
+              href="/settings/user"
               className="flex items-center gap-2 rounded px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             >
               <Settings className="size-4" />
@@ -101,7 +138,7 @@ function AppShell({ children }: AppLayoutProps) {
           )}
         </nav>
 
-        {!inSettings ? (
+        {!isInSettingsRoute ? (
           <div className="flex flex-1 flex-col overflow-y-auto px-3 py-3">
             <div className="mb-2 flex items-center justify-between px-2">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -129,12 +166,12 @@ function AppShell({ children }: AppLayoutProps) {
                       type="button"
                       variant="ghost"
                       onClick={() => setActiveChatId(chat.id)}
-                    className={`w-full justify-start truncate px-2 py-1.5 text-sm shadow-none transition-colors ${
-                      activeChatId === chat.id
-                        ? "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary hover:text-sidebar-primary-foreground"
-                        : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                    }`}
-                  >
+                      className={`w-full justify-start truncate px-2 py-1.5 text-sm shadow-none transition-colors ${
+                        activeChatId === chat.id
+                          ? "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary hover:text-sidebar-primary-foreground"
+                          : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      }`}
+                    >
                       {truncateTitle(chat.title, 30)}
                     </Button>
                   </li>
@@ -156,7 +193,9 @@ function AppShell({ children }: AppLayoutProps) {
               ) : null}
               <span
                 className={
-                  crumb.muted ? "text-muted-foreground" : "font-medium text-foreground"
+                  crumb.muted
+                    ? "text-muted-foreground"
+                    : "font-medium text-foreground"
                 }
               >
                 {crumb.label}

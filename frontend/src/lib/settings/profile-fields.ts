@@ -7,14 +7,14 @@ import {
   SALARY_BANDS,
 } from "@/lib/constants";
 
-export type ProfileField = {
+export type UserSettingsField = {
   key: UserProfileKey;
   label: string;
   type: "chip" | "yesno";
   options?: readonly string[];
 };
 
-export const PROFILE_FIELDS: ProfileField[] = [
+export const USER_SETTINGS_FIELDS: UserSettingsField[] = [
   {
     key: "nationality",
     label: "Nationality / citizenship",
@@ -61,3 +61,5 @@ export const PROFILE_FIELDS: ProfileField[] = [
     type: "yesno",
   },
 ];
+
+export const PROFILE_FIELDS = USER_SETTINGS_FIELDS;
