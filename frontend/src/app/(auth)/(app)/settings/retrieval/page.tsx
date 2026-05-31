@@ -364,7 +364,7 @@ export default function RetrievalSettingsPage() {
                     min={3}
                     max={10}
                     step={1}
-                    value={settings.chunks_per_search}
+                    value={settings.chunks_per_search ?? 5}
                     onChange={(event) =>
                       setSettings((currentSettings) => ({
                         ...currentSettings,
@@ -400,7 +400,7 @@ export default function RetrievalSettingsPage() {
                     min={3}
                     max={10}
                     step={1}
-                    value={settings.final_context_size}
+                    value={settings.final_context_size ?? 5}
                     onChange={(event) =>
                       setSettings((currentSettings) => ({
                         ...currentSettings,
@@ -436,7 +436,7 @@ export default function RetrievalSettingsPage() {
                     min={0.1}
                     max={0.9}
                     step={0.1}
-                    value={settings.similarity_threshold}
+                    value={settings.similarity_threshold ?? 0.5}
                     onChange={(event) =>
                       setSettings((currentSettings) => ({
                         ...currentSettings,

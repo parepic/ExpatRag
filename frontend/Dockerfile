@@ -13,6 +13,11 @@ RUN pnpm install --frozen-lockfile
 
 COPY frontend ./
 
+ARG NEXT_PUBLIC_BACKEND_URL
+ENV NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
+
+RUN pnpm build
+
 EXPOSE 3000
 
-CMD ["pnpm", "dev", "--hostname", "0.0.0.0"]
+CMD ["pnpm", "start"]
