@@ -1,0 +1,841 @@
+Summary: 29 changed, 16 added, 0 removed, 71 unchanged (116 total pages)
+
+=== ADDED: https://ind.nl/en/accessibility ===
+
+=== CHANGED: https://ind.nl/en/after-your-application/decision-periods ===
+--- corpus
++++ snapshot
+@@ -1,6 +1,6 @@
+ Decision periods
+ 
+-Last update: 13 May 2026
++Last update: 22 May 2026
+ 
+ The IND must decide on your residence permit application or your objection to an IND decision within a certain time frame. This is called the decision period. Find out the decision period for your residence permit application or objection.
+ 
+@@ -22,12 +22,96 @@
+ 
+ A legal decision period of 3 months applies to this application.
+ 
++Application for the purpose of work as a highly skilled migrant
++
++A legal decision period of 90 days applies to this application.
++
++Shorter decision period in some cases
++
++Are you applying for the residence purpose of scientific research? And do you currently have a residence permit for one of the following purposes?
++
++Paid employment
++
++European Blue Card (EBK)
++
++Work experience
++
++Research under Directive (EU) 2016/801
++
++Employment as non-privileged military personnel or non-privileged civilian staff
++
++In that case, a legal decision period of 45 days applies. In special cases, the IND may extend this period by 15 days.
++
++What if IND does not decide within this decision period? Then you are allowed to work for the new employer for the rest of the validity period of your current permit.
++
++Application for the purpose of paid employment
++
++A legal decision period of 90 days applies to this application.
++
++Shorter decision period in some cases
++
++Are you applying for the residence purpose of scientific research? And do you currently have a residence permit for one of the following purposes?
++
++Work as a highly skilled migrant
++
++European Blue Card (EBK)
++
++Work experience
++
++Research under Directive (EU) 2016/801
++
++Employment as non-privileged military personnel or non-privileged civilian staff
++
++Notification of change of employer
++
++Are you changing employers and is your current residence permit still valid? And do you currently have one of the following residence permits?
++
++Paid employment
++
++Work as a highly skilled migrant
++
++European Blue Card (EBK)
++
++Research under Directive (EU) 2016/801
++
++Work experience
++
++Employment as non-privileged military personnel or non-privileged civilian staff
++
++Change of employer and extension
++
++Did you also immediately request an extension of your permit when changing employers? In that case, 2 decision periods apply:
++
++As long as your residence permit is still valid, a decision period of 45 days applies.
++
++If you applied for an extension, a decision period of 90 days applies.
++
++Do you and your employer meet the requirements? If so, the IND grants the permit for the duration of the employment contract with the new employer.
++
+ Application for the purpose of residence of research
+ 
+ A legal decision period of 60 days applies to this application.
+ 
+ Was your application submitted by a recognised sponsor? Then the IND usually needs less time to decide. If the application is complete, the target decision period is 2 weeks.
+ 
++Shorter decision period in some cases
++
++Are you applying for the residence purpose of scientific research? And do you currently have a residence permit for one of the following purposes?
++
++Paid employment
++
++Work as a highly skilled migrant
++
++European Blue Card (EBK)
++
++Work experience
++
++Employment as non-privileged military personnel or non-privileged civilian staff
++
++In that case, a legal decision period of 45 days applies. In special cases, the IND may extend this period by 15 days.
++
++What if IND does not decide within this decision period? Then you are allowed to work for the new employer for the rest of the validity period of your current permit.
++
+ Application European Blue Card
+ 
+ A decision period of 30 days applies to:
+@@ -38,6 +122,18 @@
+ 
+ An application for family members. The application must be submitted at the same time as an European Blue Card application, which is subject to a decision period of 30 days.
+ 
++A legal decision period of 45 days applies if the applicant has one of the following residence permits:
++
++Paid employment
++
++Work as a highly skilled migrant
++
++Research under Directive (EU) 2016/801
++
++Work experience
++
++Employment as non-privileged military personnel or non-privileged civilian staff
++
+ A decision period of 90 days applies to all other applications.
+ 
+ Application for the purpose of residence of study
+@@ -52,6 +148,24 @@
+ 
+ Was your application submitted by a recognised sponsor? Then the IND usually needs less time to decide. If the application is complete, the target decision period is 2 weeks.
+ 
++Shorter decision period in some cases
++
++Are you applying for the residence purpose of scientific research? And do you currently have a residence permit for one of the following purposes?
++
++Paid employment
++
++Work as a highly skilled migrant
++
++European Blue Card (EBK)
++
++Research under Directive (EU) 2016/801
++
++Employment as non-privileged military personnel or non-privileged civilian staff
++
++In that case, a legal decision period of 45 days applies. In special cases, the IND may extend this period by 15 days.
++
++What if IND does not decide within this decision period? Then you are allowed to work for the new employer for the rest of the validity period of your current permit.
++
+ Application for the purpose of residence of exchange in the context of the European Solidarity Corps
+ 
+ A legal decision period of 60 days applies to this application.
+@@ -172,6 +286,20 @@
+ 
+ The decision period varies per application. The IND can extend the decision period by several weeks to a maximum of 6 months. If your application is not complete, you or your authorised representative will receive a letter. You can send the documents within 2 weeks. Then the decision period will be extended by 2 weeks.
+ 
++Extension of decision period for initial application residence permit for work
++
++You have submitted an initial application for one of the following residence purposes:
++
++Paid employment
++
++Work as a highly skilled migrant
++
++Orientation year
++
++Employment as non-privileged military personnel or non-privileged civilian staff
++
++In that case, the IND may extend the legal decision-making period by 30 days. We do have to explain the reasons for the extension, for example because further investigation is needed.
++
+ Extension of asylum application decision period
+ 
+ From 27 September 2022 until 1 January 2024, the IND has extended the legal decision period by 9 months. This means that the legal decision period is 15 months for these asylum applications.
+
+
+=== CHANGED: https://ind.nl/en/after-your-application/foreign-nationals-identity-document-type-w-and-type-w2 ===
+--- corpus
++++ snapshot
+@@ -1,6 +1,6 @@
+ Foreign Nationals Identity Document (Type W and Type W2)
+ 
+-Last update: 9 March 2026
++Last update: 20 May 2026
+ 
+ You need a Foreign Nationals Identity Document (in Dutch: Vreemdelingen Identiteitsbewijs or VI). Find out when you will get a Foreign Nationals Identity Document Type W or Type W2 and when you can apply for it yourself.
+ 
+@@ -74,13 +74,11 @@
+ 
+ Application forms
+ 
+-In these situations you can apply for the Foreign Nationals Identity Document Type W online:
++In the following situations you can apply for the Foreign Nationals Identity Document Type W online. You need to log in using DigiD.
+ 
+ You have applied for extension of your asylum residence permit and are still waiting for a decision.
+ 
+ You have applied for a permanent asylum residence permit and you are still waiting for a decision.
+-
+-To apply online you need DigiD with SMS verification and internet banking (iDEAL).
+ 
+ Start online application
+ 
+
+
+=== ADDED: https://ind.nl/en/cookies ===
+
+=== ADDED: https://ind.nl/en/dutch-citizenship/becoming-a-dutch-national-abroad ===
+
+=== ADDED: https://ind.nl/en/dutch-citizenship/becoming-a-dutch-national-through-naturalisation ===
+
+=== ADDED: https://ind.nl/en/dutch-citizenship/becoming-a-dutch-national-through-option ===
+
+=== ADDED: https://ind.nl/en/dutch-citizenship/dutch-citizen-by-birth-acknowledgment-or-adoption ===
+
+=== ADDED: https://ind.nl/en/dutch-citizenship/losing-dutch-nationality ===
+
+=== ADDED: https://ind.nl/en/dutch-citizenship/regaining-dutch-citizenship ===
+
+=== ADDED: https://ind.nl/en/living-in-the-netherlands-with-a-residence-permit/civic-integration-for-more-secure-residence-permit-and-naturalisation ===
+
+=== ADDED: https://ind.nl/en/living-in-the-netherlands-with-a-residence-permit/main-residency ===
+
+=== ADDED: https://ind.nl/en/living-in-the-netherlands-with-a-residence-permit/travelling-with-a-residence-permit-and-a-return-visa ===
+
+=== ADDED: https://ind.nl/en/privacy ===
+
+=== ADDED: https://ind.nl/en/proclaimer ===
+
+=== CHANGED: https://ind.nl/en/replace-extend-renew-and-change/change/residence-permit-humanitarian-non-temporary ===
+--- corpus
++++ snapshot
+@@ -1,6 +1,6 @@
+ Residence permit humanitarian non-temporary
+ 
+-Last update: 19 December 2025
++Last update: 20 May 2026
+ 
+ You want to apply for a residence permit humanitarian non-temporary. Find out what the requirements are and how to apply for the residence permit on non-temporary grounds.
+ 
+@@ -222,6 +222,8 @@
+ 
+ We can extend the decision period if it takes longer to decide. For example, because the application is not complete. In that case, the IND will send you a letter.
+ 
++Do you also want to receive your post from the IND digitally? Register to receive mail in your message box (Berichtenbox) in MijnOverheid.
++
+ Follow the application in My IND.
+ 
+ 5. Wait for decision on application
+@@ -230,6 +232,8 @@
+ 
+ We can extend the decision period if it takes longer to decide. For example, because the application is not complete. In that case, the IND will send you a letter.
+ 
++Do you also want to receive your post from the IND digitally? Register to receive mail in your message box (Berichtenbox) in MijnOverheid.
++
+ Follow the application in My IND.
+ 
+ 4. Decision on application
+@@ -254,7 +258,7 @@
+ 
+ Application forms
+ 
+-In these situations you can submit this application online. • You have stayed in the Netherlands for more than 5 years as a spouse or partner. • As a minor child in the Netherlands, you have stayed with your parents for more than 1 year. • You were born in the Netherlands and have stayed with your parents. • Your sponsor (spouse, partner or parent) has passed away. • You don’t have a residence permit based on Article 8 ECHR. To apply online you need DigiD with SMS verification and internet banking (iDEAL).
++In these situations you can submit this application online. • You have stayed in the Netherlands for more than 5 years as a spouse or partner. • As a minor child in the Netherlands, you have stayed with your parents for more than 1 year. • You were born in the Netherlands and have stayed with your parents. • Your sponsor (spouse, partner or parent) has passed away. • You don’t have a residence permit based on Article 8 ECHR. You need to log in using DigiD. You can pay via iDEAL | Wero.
+ 
+ Online application form Continued residence after a stay as a family member
+ 
+
+
+=== CHANGED: https://ind.nl/en/replace-extend-renew-and-change/extend-and-renew/regular-temporary-residence-permit-extension ===
+--- corpus
++++ snapshot
+@@ -1,6 +1,6 @@
+ Regular temporary residence permit extension
+ 
+-Last update: 28 November 2025
++Last update: 20 May 2026
+ 
+ You want to extend your regular temporary residence permit (Type I) because it expires within 3 months. Find out what the requirements are and how to apply for extension.
+ 
+@@ -102,6 +102,8 @@
+ 
+ We can extend the decision period if it takes longer to decide. For example, because the application is not complete. In that case, the IND will send you a letter.
+ 
++Do you also want to receive your post from the IND digitally? Register to receive mail in your message box (Berichtenbox) in MijnOverheid.
++
+ Follow the application in My IND.
+ 
+ 5. Wait for decision on application
+@@ -110,6 +112,8 @@
+ 
+ We can extend the decision period if it takes longer to decide. For example, because the application is not complete. In that case, the IND will send you a letter.
+ 
++Do you also want to receive your post from the IND digitally? Register to receive mail in your message box (Berichtenbox) in MijnOverheid.
++
+ Follow the application in My IND.
+ 
+ 6. Decision on application
+@@ -126,7 +130,7 @@
+ 
+ Application forms
+ 
+-You can submit this application online. You must have DigiD with SMS verification and internet banking (iDEAL). Has your residence permit expired? Or were you unable to apply online? Then use the written application form which you sent to the IND by post.
++You can submit this application online. You need to log in using DigiD. You can pay via iDEAL | Wero. Has your residence permit expired? Or were you unable to apply online? Then use the written application form which you sent to the IND by post.
+ 
+ Online application form for extension of your residence permit
+ 
+
+
+=== CHANGED: https://ind.nl/en/replace-extend-renew-and-change/permanent-residency/permanent-residence-permit ===
+--- corpus
++++ snapshot
+@@ -1,6 +1,6 @@
+ Permanent residence permit
+ 
+-Last update: 10 June 2025
++Last update: 20 May 2026
+ 
+ You want to apply for a permanent residence permit. Find out what the requirements are and how you can apply for permanent residency.
+ 
+@@ -128,7 +128,7 @@
+ 
+ Application forms
+ 
+-You can submit this application online. You must have DigiD with SMS verification and internet banking (iDEAL).
++You can submit this application online. You need to log in using DigiD. You can pay via iDEAL | Wero.
+ 
+ Online application form application regular permanent residence or EU-long term resident
+ 
+@@ -140,7 +140,7 @@
+ 
+ This form is only available in Dutch:
+ 
+-Aanvraag verblijfsvergunning EU langdurig ingezetene of een verblijfsvergunning regulier voor onbepaalde tijd 6009 (PDF, 834.79 KB)
++Aanvraag verblijfsvergunning EU langdurig ingezetene of een verblijfsvergunning regulier voor onbepaalde tijd 6009 (PDF, 927.15 KB)
+ 
+ The residence permit
+ 
+
+
+=== CHANGED: https://ind.nl/en/replace-extend-renew-and-change/permanent-residency/permanent-residence-permit-for-ex-privileged-persons-and-their-family-members ===
+--- corpus
++++ snapshot
+@@ -150,7 +150,7 @@
+ 
+ Aanvraag voor een EU verblijfsvergunning voor langdurig ingezetene of een verblijfsvergunning regulier voor onbepaalde tijd - 6009 (Only available in Dutch)
+ 
+-Aanvraag verblijfsvergunning EU langdurig ingezetene of een verblijfsvergunning regulier voor onbepaalde tijd 6009 (PDF, 834.79 KB)
++Aanvraag verblijfsvergunning EU langdurig ingezetene of een verblijfsvergunning regulier voor onbepaalde tijd 6009 (PDF, 927.15 KB)
+ 
+ The residence permit
+ 
+
+
+=== CHANGED: https://ind.nl/en/replace-extend-renew-and-change/permanent-residency/renew-permanent-residence-permit ===
+--- corpus
++++ snapshot
+@@ -1,6 +1,6 @@
+ Renew permanent residence permit
+ 
+-Last update: 23 September 2025
++Last update: 20 May 2026
+ 
+ You want to renew the residence document of your residence permit for permanent residency. Find out what the requirements are and how to renew the residence document.
+ 
+@@ -88,7 +88,7 @@
+ 
+ Application forms
+ 
+-You can submit this application online. You must have DigiD with SMS verification and internet banking (iDEAL).
++You can submit this application online. You need to log in using DigiD. You can pay via iDEAL | Wero.
+ 
+ Online application form renewal
+ 
+
+
+=== ADDED: https://ind.nl/en/replace-extend-renew-and-change/residence-permit-damaged-or-change-of-personal-details ===
+
+=== ADDED: https://ind.nl/en/replace-extend-renew-and-change/residence-permit-lost-or-stolen ===
+
+=== CHANGED: https://ind.nl/en/residence-permits/asylum/asylum-family-reunification ===
+--- corpus
++++ snapshot
+@@ -1,6 +1,6 @@
+ Asylum family reunification
+ 
+-Last update: 2 April 2026
++Last update: 20 May 2026
+ 
+ You have an asylum residence permit and you want to apply for family reunification. Read how you apply for a residence permit and visa (MVV) for family reunification.
+ 
+
+
+=== CHANGED: https://ind.nl/en/residence-permits/asylum/extending-your-temporary-asylum-residence-permit ===
+--- corpus
++++ snapshot
+@@ -1,6 +1,6 @@
+ Extending your temporary asylum residence permit
+ 
+-Last update: 21 February 2025
++Last update: 20 May 2026
+ 
+ You want to extend your temporary asylum residence permit because it has almost expired. Find out what the requirements are and how to apply for an extension.
+ 
+@@ -108,7 +108,7 @@
+ 
+ Application forms
+ 
+-You can submit this application online. You must have DigiD with SMS verification and internet banking (iDEAL).
++You can submit this application online. You need to log in using DigiD.
+ 
+ Online application form extension temporary asylum permit or application for a permanent asylum permit
+ 
+
+
+=== CHANGED: https://ind.nl/en/residence-permits/asylum/permanent-asylum-residency ===
+--- corpus
++++ snapshot
+@@ -1,6 +1,6 @@
+ Permanent asylum residency
+ 
+-Last update: 1 November 2024
++Last update: 20 May 2026
+ 
+ You want to apply for a permanent asylum residence permit. This is possible if you have had an asylum residence permit for 5 years. Read what the requirements are and how you apply for the residence permit.
+ 
+@@ -96,7 +96,7 @@
+ 
+ Application forms
+ 
+-You can submit this application online. You must have DigiD with SMS verification and internet banking (iDEAL).
++You can submit this application online. You need to log in using DigiD. You can pay via iDEAL | Wero.
+ 
+ Online application form extension temporary asylum permit or application for a permanent asylum permit
+ 
+
+
+=== CHANGED: https://ind.nl/en/residence-permits/eu-eea-or-swiss-citizens/permanent-residency-for-union-citizens-and-their-family ===
+--- corpus
++++ snapshot
+@@ -1,6 +1,6 @@
+ Permanent residency for Union citizens and their family
+ 
+-Last update: 11 November 2025
++Last update: 20 May 2026
+ 
+ You or your family member want to apply for permanent residency for Union citizens. Find out what the requirements are and how you can apply for the residence document.
+ 
+@@ -146,7 +146,7 @@
+ 
+ Application forms
+ 
+-You can submit this application online. You need DigiD with SMS verification and internet banking (iDEAL).
++You can submit this application online. You need to log in using DigiD. You can pay via iDEAL | Wero.
+ 
+ Online application form permanent residence EU (duurzaam verblijf)
+ 
+
+
+=== CHANGED: https://ind.nl/en/residence-permits/family-and-partner/residence-permit-for-child-born-in-the-netherlands ===
+--- corpus
++++ snapshot
+@@ -1,6 +1,6 @@
+ Residence permit for child born in the Netherlands
+ 
+-Last update: 28 November 2025
++Last update: 20 May 2026
+ 
+ Your child was born in the Netherlands and does not have a residence permit yet. Your child does not have Dutch nationality. Find out what the requirements are and how to apply for the residence permit.
+ 
+@@ -152,6 +152,8 @@
+ 
+ We can extend the decision period if it takes longer to decide. For example, because the application is not complete. In that case, the IND will send you a letter.
+ 
++Do you also want to receive your post from the IND digitally? Register to receive mail in your message box (Berichtenbox) in MijnOverheid.
++
+ Follow the application in My IND.
+ 
+ 5. Wait for decision on application
+@@ -160,6 +162,8 @@
+ 
+ We can extend the decision period if it takes longer to decide. For example, because the application is not complete. In that case, the IND will send you a letter.
+ 
++Do you also want to receive your post from the IND digitally? Register to receive mail in your message box (Berichtenbox) in MijnOverheid.
++
+ Follow the application in My IND.
+ 
+ 3. Decision on application
+@@ -184,7 +188,7 @@
+ 
+ Application forms
+ 
+-You can submit this application online. You must have DigiD with SMS verification and internet banking (iDEAL).
++You can submit this application online. You need to log in using DigiD. You can pay via iDEAL | Wero.
+ 
+ Online application form child born in the Netherlands
+ 
+
+
+=== CHANGED: https://ind.nl/en/residence-permits/family-and-partner/residence-permit-for-minor-child-to-stay-with-parent ===
+--- corpus
++++ snapshot
+@@ -1,5 +1,5 @@
+ Residence permit for minor child to stay with parent
+ 
+-Last update: 26 September 2025
++Last update: 20 May 2026
+ 
+ To live with you in the Netherlands, your child who is a minor needs a residence permit. Find out what the requirements are and how to apply for a residence permit for your child under 18.
+
+=== CHANGED: https://ind.nl/en/residence-permits/family-and-partner/residence-permit-for-partner ===
+--- corpus
++++ snapshot
+@@ -1,5 +1,5 @@
+ Residence permit for partner
+ 
+-Last update: 18 December 2025
++Last update: 20 May 2026
+ 
+ You would like your foreign partner to live with you in the Netherlands. Your partner needs a residence permit. Find out what the requirements are and how to apply for the residence permit.
+
+=== CHANGED: https://ind.nl/en/residence-permits/family-and-partner/residence-with-your-minor-dutch-child-chavez ===
+--- corpus
++++ snapshot
+@@ -114,6 +114,8 @@
+ 
+ You will get a letter in which it says that the IND has received your application. This letter also explains how to apply for a residence endorsement sticker. This is a sticker in your passport. On the residence endorsement sticker, it says that you are allowed to await the procedure in the Netherlands, and whether or not you are allowed to work in the Netherlands during the application process.
+ 
++Do you also want to receive your post from the IND digitally? Register to receive mail in your message box (Berichtenbox) in MijnOverheid.
++
+ Follow your application in My IND.
+ 
+ 7. Decision on application
+
+
+=== CHANGED: https://ind.nl/en/residence-permits/family-and-partner/verification-against-eu-law-for-union-citizen-family-members ===
+--- corpus
++++ snapshot
+@@ -1,6 +1,6 @@
+ Verification against EU law for Union citizen family members
+ 
+-Last update: 6 May 2026
++Last update: 20 May 2026
+ 
+ You are coming to the Netherlands to live with a citizen of the European Union (EU), European Economic Area (EEA) or Switzerland as a family member. You do not have the nationality of an EU or EEA country, or Switzerland. Find out what the requirements are and how you can apply for EU verification.
+ 
+@@ -58,7 +58,7 @@
+ 
+ You need care from the Union citizen because of serious health problems.
+ 
+-Your family member (the Union citizen) has legal residency in the Netherlands. Your family member (the Union citizen), in most cases, does not need to be registrered at the IND anymore. But the following requirements for legal residency still apply:
++Your family member (the Union citizen) has legal residency in the Netherlands. Your family member (the Union citizen), in most cases, does not need to be registered at the IND anymore. But the following requirements for legal residency still apply:
+ 
+ a valid passport or identity card of an EU or EEA country or Switzerland;
+ 
+@@ -150,7 +150,7 @@
+ 
+ Application forms
+ 
+-Your family member, the Union citizen, can submit the application online for you. Your family member needs DigiD with SMS verification and internet banking (iDEAL) for this. Are you the (grand)parent of a Union citizen? Or is your family member a Dutch citizen subject to EU law? Then you can only submit the application yourself in writing by post.
++Your family member, the Union citizen, can submit the application online for you. Your family member needs to log in using DigiD. Your family member can pay via iDEAL | Wero. Are you the (grand)parent of a Union citizen? Or is your family member a Dutch citizen subject to EU law? Then you can only submit the application yourself in writing by post.
+ 
+ Online application for verification against EU law
+ 
+
+
+=== CHANGED: https://ind.nl/en/residence-permits/long-term-eu-residency/apply-for-a-residence-permit-for-long-term-eu-residents ===
+--- corpus
++++ snapshot
+@@ -1,8 +1,8 @@
+ Apply for a residence permit for long-term EU residents
+ 
+-Last update: 29 April 2026
+-
+-You want to apply for a residence permit for long-term EU residents. Find out what the requirements are and how you can apply for the permit.
++Last update: 21 May 2026
++
++You already live in the Netherlands with a residence permit. And you now want to apply for a residence permit for long-term EU residents. Find out what the requirements are and how you can apply for the permit.
+ 
+ For whom is the application for long-term EU residents?
+ 
+@@ -18,9 +18,9 @@
+ 
+ For whom is the application for long-term EU residents?
+ 
+-You have the nationality of a country outside the European Union (EU), the European Economic Area (EEA) or Switzerland. You want to live indefinitely in the Netherlands.
+-
+-You have a temporary residence permit with a non-temporary residence purpose. Or you have a permanent residence permit. With the permit for long-term EU residents you can apply more easily for a residence permit in one of the other EU countries with a residence permit for long-term residents.
++You have the nationality of a country outside the European Union (EU), the European Economic Area (EEA) or Switzerland. You already live in the Netherlands with a residence permit. And you want the status long-term resident EU. This allows you to live in the Netherlands indefinitely.
++
++With the permit for long-term EU residents you can apply more easily for a residence permit in one of the other EU countries with a residence permit for long-term residents.
+ 
+ Requirements
+ 
+@@ -52,8 +52,6 @@
+ 
+ You have lived in the Netherlands for at least 5 consecutive years with a valid residence permit. You currently have a valid European Blue Card. In these 5 years, you have not been outside the Netherlands for a period longer than 12 consecutive months. In total, you have not been outside the Netherlands for more than 18 months.
+ 
+-Other requirements you also have to meet
+-
+ You have always met the requirements for your residence permit or residence document. And you still meet these requirements.
+ 
+ You now have one of the following residence permits or residence documents.
+@@ -172,7 +170,7 @@
+ 
+ Application forms
+ 
+-You can submit this application online. You need DigiD with SMS verification and internet banking (iDEAL). Do you have an asylum residence permit (type III or IV)? Then use the written application form.
++You can submit this application online. You need to log in using DigiD. You can pay via iDEAL | Wero. Do you have an asylum residence permit (type III or IV)? Then use the written application form.
+ 
+ Online application form application regular permanent residence or EU-long term resident
+ 
+@@ -184,7 +182,7 @@
+ 
+ I have a regular residence permit (type I or II). Or a residence document as a family member of a minor Dutch child (Chavez).
+ 
+-Aanvraag verblijfsvergunning EU langdurig ingezetene of een verblijfsvergunning regulier voor onbepaalde tijd 6009 (PDF, 834.79 KB)
++Aanvraag verblijfsvergunning EU langdurig ingezetene of een verblijfsvergunning regulier voor onbepaalde tijd 6009 (PDF, 927.15 KB)
+ 
+ I have an asylum residence permit (type III or IV).
+ 
+
+
+=== CHANGED: https://ind.nl/en/residence-permits/other-residence-permits/residence-permit-honour-based-or-domestic-violence ===
+--- corpus
++++ snapshot
+@@ -92,6 +92,8 @@
+ 
+ We can extend the decision period if it takes longer to decide. For example, because the application is not complete. In that case, the IND will send you a letter.
+ 
++Do you also want to receive your post from the IND digitally? Register to receive mail in your message box (Berichtenbox) in MijnOverheid.
++
+ Follow the application in My IND.
+ 
+ 5. Wait for decision on application
+@@ -99,6 +101,8 @@
+ The IND must take a decision within 90 days. This is called the decision period.
+ 
+ We can extend the decision period if it takes longer to decide. For example, because the application is not complete. In that case, the IND will send you a letter.
++
++Do you also want to receive your post from the IND digitally? Register to receive mail in your message box (Berichtenbox) in MijnOverheid.
+ 
+ Follow the application in My IND.
+ 
+
+
+=== CHANGED: https://ind.nl/en/residence-permits/withdrawal-agreement-brexit/permanent-residency-based-on-withdrawal-agreement ===
+--- corpus
++++ snapshot
+@@ -1,6 +1,6 @@
+ Permanent residency based on Withdrawal Agreement
+ 
+-Last update: 12 June 2025
++Last update: 20 May 2026
+ 
+ You want to apply for permanent residency and you fall under the Brexit Withdrawal Agreement. Find out what the requirements are and how you can apply for the residence document.
+ 
+@@ -140,7 +140,7 @@
+ 
+ Application forms
+ 
+-You can submit this application online. To do so, you need DigiD with SMS verification and internet banking (iDEAL).
++You can submit this application online. You need to log in using DigiD. You can pay via iDEAL | Wero.
+ 
+ Online application form permanent residence document WA
+ 
+
+
+=== CHANGED: https://ind.nl/en/residence-permits/withdrawal-agreement-brexit/temporary-residency-based-on-withdrawal-agreement ===
+--- corpus
++++ snapshot
+@@ -1,6 +1,6 @@
+ Temporary residency based on Withdrawal Agreement
+ 
+-Last update: 9 September 2025
++Last update: 20 May 2026
+ 
+ You want to apply for a temporary residence document because you fall under the Brexit Withdrawal Agreement. Find out what the requirements are and how you can apply for the residence document.
+ 
+@@ -150,7 +150,7 @@
+ 
+ Application forms
+ 
+-You can apply online if you are a UK national. To do so, you need DigiD with SMS verification and internet banking (iDEAL).
++You can apply online if you are a UK national. You need to log in using DigiD. You can pay via iDEAL | Wero.
+ 
+ Online application form temporary residence document WA
+ 
+
+
+=== CHANGED: https://ind.nl/en/residence-permits/work/apply-for-recognition-as-sponsor ===
+--- corpus
++++ snapshot
+@@ -116,7 +116,7 @@
+ 
+ Advice from the Netherlands Enterprise Agency (RVO)
+ 
+-The IND can ask the Netherlands Enterprise Agency (in Dutch: Rijksdienst voor Ondernemend Nederland or RVO) for advice on the continuity and solvency of businesses. For start-up businesses the RVO uses a point system to assess this. A maximum of 100 points can be obtained. You need at least 50 points for positive advice.
++The IND can ask the Netherlands Enterprise Agency (in Dutch: Rijksdienst voor Ondernemend Nederland or RVO) for advice on the continuity and solvency of businesses. For start-up businesses the RVO uses a point system to assess this. A maximum of 100 points can be obtained. You need at least 65 points for positive advice.
+ 
+ Sections of the point system
+ 
+@@ -156,9 +156,9 @@
+ 
+ Your organisation, or the natural persons and legal entities involved in your organisation, became insolvent 3 times in the year preceding the application.
+ 
+-The tax authorities gave your organisation a negligence penalty in the 4 years before the application.
+-
+-Your organisation got 3 or more penalties in the 4 years before the application. These are the penalties concerned:
++The tax authorities gave your organisation a negligence penalty in the 3 years before the application.
++
++Your organisation got 3 or more penalties in the 3 years before the application. These are the penalties concerned:
+ 
+ penalty under the Aliens Act (Vw);
+ 
+
+
+=== CHANGED: https://ind.nl/en/residence-permits/work/directive-eu-2016801-short-term-mobility-of-researchers ===
+--- corpus
++++ snapshot
+@@ -2,7 +2,7 @@
+ 
+ Last update: 9 April 2026
+ 
+-You have a residence permit as a researcher in a different EU country under Directive (EU) 2016/801. You are coming for a maximum of 180 days out of a 360-day period to carry out research in the Netherlands. Find out what the requirements are and what the process is.
++You have a residence permit as a researcher in a different EU country under Directive (EU) 2016/801. You are coming for a maximum of 120 days out of a 360-day period to carry out research in the Netherlands. Find out what the requirements are and what the process is.
+ 
+ What is short-term mobility?
+ 
+@@ -24,9 +24,9 @@
+ 
+ There are 2 forms of intra-EU mobility for researchers.
+ 
+-Short-term mobility: the researcher comes to the Netherlands to carry out research for a maximum of 180 days out of a 360-day period. No residence permit is required for short-term mobility. Your residence permit in the other country is also valid in the Netherlands.
++Short-term mobility: the researcher comes to the Netherlands to carry out research for a maximum of 120 days out of a 360-day period. No residence permit is required for short-term mobility. Your residence permit in the other country is also valid in the Netherlands.
+ 
+-Long-term mobility: the researcher will come to carry out research in the Netherlands for more than 180 days. A residence permit is required for long-term mobility. Find out more on the web page Residence permit researcher (Directive (EU) 2016/801).
++Long-term mobility: the researcher will come to carry out research in the Netherlands for more than 120 days. A residence permit is required for long-term mobility. Find out more on the web page Residence permit researcher (Directive (EU) 2016/801).
+ 
+ Family members of researchers
+ 
+@@ -38,7 +38,7 @@
+ 
+ You have a valid residence permit for the purpose of research under Directive (EU) 2016/801 in a different EU country, except for Ireland en Denmark.
+ 
+-You are coming to the Netherlands for a maximum of 180 days out of a period of 360 days. Your residence permit from the other EU country will remain valid during your stay in the Netherlands.
++You are coming to the Netherlands for a maximum of 120 days out of a period of 360 days. Your residence permit from the other EU country will remain valid during your stay in the Netherlands.
+ 
+ You are going to carry out research at a research institution in the Netherlands. This research institution is recognised by the IND as sponsor. A recognised sponsor is listed in the Public Register Recognised Sponsors.
+ 
+@@ -122,7 +122,7 @@
+ 
+ Duration of short-term mobility
+ 
+-You can carry out research in the Netherlands for a maximum of 180 days out of a period of 360 days. Your residence permit for the purpose of research in the other EU country must be valid during your stay in the Netherlands.
++You can carry out research in the Netherlands for a maximum of 120 days out of a period of 360 days. Your residence permit for the purpose of research in the other EU country must be valid during your stay in the Netherlands.
+ 
+ See also
+ 
+
+
+=== CHANGED: https://ind.nl/en/residence-permits/work/european-blue-card-residence-permit ===
+--- corpus
++++ snapshot
+@@ -1,5 +1,5 @@
+ European Blue Card residence permit
+ 
+-Last update: 9 April 2026
++Last update: 22 May 2026
+ 
+ With a European Blue Card, you can work in the Netherlands as a highly educated migrant. Find out what the requirements are and how your employer can apply for the permit.
+
+=== CHANGED: https://ind.nl/en/residence-permits/work/highly-skilled-migrant ===
+--- corpus
++++ snapshot
+@@ -1,5 +1,5 @@
+ Highly skilled migrant
+ 
+-Last update: 13 May 2026
++Last update: 22 May 2026
+ 
+ To work in the Netherlands as a highly skilled migrant, you need a residence permit. Only an employer recognised by the IND can apply for your permit. Read what the requirements are and how your employer can apply.
+
+=== CHANGED: https://ind.nl/en/residence-permits/work/intern-or-apprentice-in-the-netherlands ===
+--- corpus
++++ snapshot
+@@ -1,5 +1,5 @@
+ Intern or apprentice in the Netherlands
+ 
+-Last update: 9 April 2026
++Last update: 22 May 2026
+ 
+ In order to be an intern or apprentice in the Netherlands, you need a single permit (in Dutch: gecombineerde vergunning verblijf en arbeid or GVVA). The single permit is a combination of the residence permit and the work permit (in Dutch: tewerkstellingsvergunning or TWV). Find out what the requirements are and how to apply for the single permit.
+
+=== CHANGED: https://ind.nl/en/residence-permits/work/paid-employment-residence-permit-only ===
+--- corpus
++++ snapshot
+@@ -1,5 +1,5 @@
+ Paid employment: residence permit only
+ 
+-Last update: 9 April 2026
++Last update: 22 May 2026
+ 
+ You need a residence permit for paid employment in the Netherlands. You often have to apply for a single permit (in Dutch: Gecombineerde vergunning verblijf en arbeid or GVVA), but this is not always possible. Then you can apply for a residence permit for paid employment. Find out what the requirements are and how to apply for the residence permit.
+
+=== CHANGED: https://ind.nl/en/residence-permits/work/residence-permit-for-orientation-year ===
+--- corpus
++++ snapshot
+@@ -1,5 +1,5 @@
+ Residence permit for orientation year
+ 
+-Last update: 9 April 2026
++Last update: 20 May 2026
+ 
+ If you want to look for work in the Netherlands after your graduation, doctorate or research, then you need a residence permit. Find out what the requirements are and how to apply for the residence permit.
+
+=== CHANGED: https://ind.nl/en/residence-permits/work/residence-permit-researcher-directive-eu-2016801 ===
+--- corpus
++++ snapshot
+@@ -1,5 +1,5 @@
+ Residence permit researcher (Directive (EU) 2016/801)
+ 
+-Last update: 9 April 2026
++Last update: 22 May 2026
+ 
+ Under Directive (EU) 2016/801 you are allowed to work as a researcher in the Netherlands. Find out what the requirements are and how your employer applies for the permit.
+
+=== CHANGED: https://ind.nl/en/residence-permits/work/single-permit-gvva ===
+--- corpus
++++ snapshot
+@@ -1,5 +1,5 @@
+ Single Permit: GVVA
+ 
+-Last update: 9 April 2026
++Last update: 22 May 2026
+ 
+ If you want to work in paid employment in the Netherlands, you need a single permit (in Dutch: gecombineerde vergunning verblijf en arbeid or GVVA). The single permit combines the residence permit and the work permit. Find out what the requirements are and how to apply for a single permit.
+
+=== ADDED: https://ind.nl/en/web-archive-ind ===
