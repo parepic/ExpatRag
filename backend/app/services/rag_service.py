@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from functools import lru_cache
 from dotenv import load_dotenv
-from typing import List, Callable
+from typing import List, Callable, Any
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langsmith import traceable
@@ -51,13 +51,14 @@ def _get_llm() -> ChatOpenAI:
 
 
 # ---------------------------------------------------------------------------
-# Retrieval
 # ---------------------------------------------------------------------------
 
-# Add Hybrid Search and Keyword Search here.
-
 @traceable(run_type="retriever", name="vector_search_retrieval")
-def vector_search(question: str) -> list[dict]:
+def vector_search(
+    question: str,
+    match_count: int | None = None,
+    match_threshold: float | None = None,
+) -> list[dict]:
     """Return the top-k most relevant document chunks for *question* using VECTOR SEARCH"""
     embedding_vector = _get_embeddings().embed_query(question)
 
@@ -65,8 +66,8 @@ def vector_search(question: str) -> list[dict]:
         "match_document_chunks",
         {
             "query_embedding": embedding_vector,
-            "match_threshold": RAG_MATCH_THRESHOLD,
-            "match_count": RAG_MATCH_COUNT,
+            "match_threshold": match_threshold,
+            "match_count": match_count,
         },
     ).execute()
     logger.info("vector_search_results", result_count=len(result.data or []))
@@ -74,32 +75,52 @@ def vector_search(question: str) -> list[dict]:
 
 
 @traceable(run_type="retriever", name="keyword_search_retrieval")
-def _keyword_search(question: str) -> list[dict]:
+def _keyword_search(
+    question: str,
+    match_count: int | None = None,
+) -> list[dict]:
     """Return the top-k most relevant document chunks for *question* using KEYWORD SEARCH"""
     result = supabase.rpc(
         "keyword_search_document_chunks",
         {
             "query_text": question,
-            "match_count": RAG_MATCH_COUNT,
+            "match_count": match_count,
         },
     ).execute()
     logger.info("keyword_search_results", result_count=len(result.data or []))
     return result.data or []
 
 @traceable(run_type="retriever", name="hybrid_search_retrieval")
-def hybrid_search(question: str) -> list[dict]:
-    vector_search_results = vector_search(question)
-    keyword_search_results = _keyword_search(question)
+def hybrid_search(
+    question: str,
+    match_count: int | None = None,
+    match_threshold: float | None = None,
+    vector_weight: float | None = None,
+    keyword_weight: float | None = None,
+) -> list[dict]:
+    vector_search_results = vector_search(
+        question, match_count=match_count, match_threshold=match_threshold
+    )
+    keyword_search_results = _keyword_search(question, match_count=match_count)
 
-    return reciprocal_rank_fusion([vector_search_results, keyword_search_results])
+    vw = vector_weight if vector_weight is not None else 0.5
+    kw = keyword_weight if keyword_weight is not None else 1.0 - vw
+
+    return reciprocal_rank_fusion([vector_search_results, keyword_search_results], weights=[vw, kw])
 
 @traceable(run_type="retriever", name="multi_query_vector_search_retrieval")
-def multi_query_vector_search(question: str) -> list[dict]:
-    queries = _generate_query_variations(question)
+def multi_query_vector_search(
+    question: str,
+    number_of_queries: int | None = None,
+    match_count: int | None = None,
+    match_threshold: float | None = None,
+
+) -> list[dict]:
+    queries = _generate_query_variations(question, num_queries=number_of_queries or 3)
     logger.info("multi_query_vector_search_started", query_count=len(queries))
     all_results = []
     for i, query in enumerate(queries):
-        results = vector_search(query)
+        results = vector_search(query, match_count=match_count, match_threshold=match_threshold)
         logger.info(
             "multi_query_vector_search_iteration",
             query_index=i + 1,
@@ -110,12 +131,25 @@ def multi_query_vector_search(question: str) -> list[dict]:
     return reciprocal_rank_fusion(all_results)
 
 @traceable(run_type="retriever", name="multi_query_hybrid_search_retrieval")
-def multi_query_hybrid_search(question: str) -> list[dict]:
-    queries = _generate_query_variations(question)
+def multi_query_hybrid_search(
+    question: str,
+    number_of_queries: int | None = None,
+    match_count: int | None = None,
+    match_threshold: float | None = None,
+    vector_weight: float | None = None,
+    keyword_weight: float | None = None,
+) -> list[dict]:
+    queries = _generate_query_variations(question, num_queries=number_of_queries or 3)
     logger.info("multi_query_hybrid_search_started", query_count=len(queries))
     all_results = []
     for i, query in enumerate(queries):
-        results = hybrid_search(query)
+        results = hybrid_search(
+            query,
+            match_count=match_count,
+            match_threshold=match_threshold,
+            vector_weight=vector_weight,
+            keyword_weight=keyword_weight,
+        )
         logger.info(
             "multi_query_hybrid_search_iteration",
             query_index=i + 1,
@@ -123,15 +157,18 @@ def multi_query_hybrid_search(question: str) -> list[dict]:
             result_count=len(results),
         )
         all_results.append(results)
+    # When fusing multiple hybrid runs, keep the same weighting per-source group
+    # (each inner list is already a fusion of vector+keyword). We pass None to
+    # reciprocal_rank_fusion so it uses equal weights across the multi-query runs.
     return reciprocal_rank_fusion(all_results)
 
 
-def _get_retrieval_function(strategy: str) -> Callable[[str], list[dict]]:
+def _get_retrieval_function(strategy: str) -> Callable[..., list[dict]]:
     strategy_to_function: dict[str, Callable[[str], list[dict]]] = {
-        "basic": vector_search,
-        "hybrid": hybrid_search,
-        "multi-query-vector": multi_query_vector_search,
-        "multi-query-hybrid": multi_query_hybrid_search,
+        "vector search": vector_search,
+        "hybrid search": hybrid_search,
+        "multi query vector search": multi_query_vector_search,
+        "multi query hybrid search": multi_query_hybrid_search,
     }
     normalized_strategy = strategy.strip().lower()
     retrieval_function = strategy_to_function.get(normalized_strategy)
@@ -187,7 +224,7 @@ def _load_user_profile(user_id: str) -> dict:
     user_result = (
         supabase.table("users")
         .select(
-            "username, nationality, purpose_of_stay, reason_for_visit,"
+            "nationality, purpose_of_stay, reason_for_visit,"
             "employment_status, registration_status, has_fiscal_partner,"
             "salary_band, age_bracket_under_30, prior_nl_residency, languages"
         )
@@ -227,6 +264,26 @@ def _build_chat_history(history: list[dict]) -> list[HumanMessage | AIMessage]:
     return messages
 
 
+def _load_project_settings(user_id: str):
+    logger.info("fetching_retrieval_settings", user_id=user_id)
+    result = (
+        supabase.table("project_settings")
+        .select("*")
+        .eq("user_id", user_id)
+        .limit(1)
+        .execute()
+    )
+    data = result.data or []
+    if not data:
+        logger.info("no_project_settings_found", user_id=user_id)
+        return {}
+
+    settings = data[0]
+    logger.info("project_settings_fetched", user_id=user_id, project_settings=settings)
+    return settings
+
+
+
 def retrieve_rag_context_for_agent(
     user_id: str,
     question: str,
@@ -237,8 +294,34 @@ def retrieve_rag_context_for_agent(
         user_id=user_id,
         retrieval_strategy=SEARCH_STRATEGY,
     )
-    retrieval_function = _get_retrieval_function(SEARCH_STRATEGY)
-    chunks = retrieval_function(question)
+
+    project_settings = _load_project_settings(user_id=user_id) or {}
+
+    # build params from project settings
+    chunks_per_search = project_settings.get("chunks_per_search")
+    similarity_threshold = project_settings.get("similarity_threshold")
+    vector_weight = project_settings.get("vector_weight")
+    keyword_weight = project_settings.get("keyword_weight")
+    num_queries = project_settings.get("number_of_queries")
+
+    logger.info("RAG STRATEGGY", rag_strategy=project_settings.get("rag_strategy"))
+    retrieval_function = _get_retrieval_function(project_settings.get("rag_strategy"))
+
+    # Build kwargs based on which retrieval function is being used
+    kwargs = {
+        "question": question,
+        "match_count": chunks_per_search,
+        "match_threshold": similarity_threshold,
+    }
+    
+    strategy = project_settings.get("rag_strategy", "").strip().lower()
+    if "hybrid" in strategy:
+        kwargs["vector_weight"] = vector_weight
+        kwargs["keyword_weight"] = keyword_weight
+    if "multi query" in strategy:
+        kwargs["number_of_queries"] = num_queries
+
+    chunks = retrieval_function(**kwargs)
 
     context = _build_context(chunks)
     user_profile = _load_user_profile(user_id)
@@ -369,18 +452,26 @@ def _generate_rag_reply_legacy(
     return reply_text, citations
 
 
+@traceable(run_type="chain", name="generate_rag_reply")
 def generate_rag_reply(
     user_id: str,
     question: str,
+    agent_type: str,
     chat_history: list[dict] | None = None,
 ) -> tuple[str, list[dict]]:
-    # """Generate a reply using the simple agent (hardcoded for now)."""
-    # logger.info("rag_reply_generation_via_simple_agent", user_id=user_id)
-    # from app.agents.simple_agent.simple_agent import run_simple_agent_reply
-    """Generate a reply using the supervisor agent (hardcoded for now)."""
+    
+    if agent_type == "simple":
+        logger.info("rag_reply_generation_via_simple_agent", user_id=user_id)
+        from app.agents.simple_agent.simple_agent import run_simple_agent_reply
+        return run_simple_agent_reply(
+            user_id=user_id,
+            question=question,
+            chat_history=chat_history,
+            model=LLM_MODEL,
+        )
+
     logger.info("rag_reply_generation_via_supervisor_agent", user_id=user_id)
     from app.agents.supervisor_agent.supervisor_agent import run_supervisor_agent_reply
-
     return run_supervisor_agent_reply(
         user_id=user_id,
         question=question,

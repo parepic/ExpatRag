@@ -14,7 +14,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { user, isLoading } = useAuth();
   const [tab, setTab] = useState<"login" | "register">("register");
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -37,7 +37,7 @@ export default function LoginPage() {
     event.preventDefault();
     setError("");
 
-    const trimmedUsername = username.trim();
+    const trimmedEmail = email.trim();
 
     if (password.length < 8) {
       setError("Password must be at least 8 characters long");
@@ -48,18 +48,18 @@ export default function LoginPage() {
 
     try {
       if (tab === "login") {
-        await login(trimmedUsername, password);
+        await login(trimmedEmail, password);
         router.push("/chat");
         return;
       }
 
-      await register(trimmedUsername, password);
-      await login(trimmedUsername, password);
+      await register(trimmedEmail, password);
+      await login(trimmedEmail, password);
       router.push("/onboarding");
     } catch (caughtError) {
       if (caughtError instanceof ApiError) {
         if (tab === "register" && caughtError.status === 409) {
-          setError("This username is already taken");
+          setError("This email already has an account associated with it.");
         } else {
           setError(caughtError.message);
         }
@@ -87,7 +87,7 @@ export default function LoginPage() {
         <p className="mt-3 text-sm leading-6 text-muted-foreground">
           {tab === "login"
             ? "Pick up your chats and profile from any device with your existing account."
-            : "Use a simple username and password to start saving your chats and profile."}
+            : "Use your email and password to start saving your chats and profile."}
         </p>
 
         <Tabs
@@ -106,14 +106,14 @@ export default function LoginPage() {
 
         <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
           <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
+            <Label htmlFor="email">Email</Label>
             <Input
-              id="username"
+              id="email"
               autoFocus
-              autoComplete="username"
-              value={username}
+              autoComplete="email"
+              value={email}
               onChange={(event) => {
-                setUsername(event.target.value);
+                setEmail(event.target.value);
                 setError("");
               }}
               required
@@ -125,7 +125,9 @@ export default function LoginPage() {
             <Input
               id="password"
               type="password"
-              autoComplete={tab === "login" ? "current-password" : "new-password"}
+              autoComplete={
+                tab === "login" ? "current-password" : "new-password"
+              }
               value={password}
               onChange={(event) => {
                 setPassword(event.target.value);
