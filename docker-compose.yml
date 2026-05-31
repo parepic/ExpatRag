@@ -10,6 +10,7 @@ x-python-env: &python-env
   environment:
     SUPABASE_API_URL: http://host.docker.internal:54321
     FRONTEND_URL: http://localhost:3000
+    LOG_FILE: /app/logs/application.log
 
 x-pipeline-service: &pipeline-service
   <<: [*host-supabase, *python-env]
@@ -32,6 +33,7 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app/backend
+      - ./logs:/app/logs
 
   frontend:
     build:

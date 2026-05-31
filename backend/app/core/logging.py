@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import socket
+import sys
 from contextvars import ContextVar
 from pathlib import Path
 from typing import Optional
@@ -33,7 +34,7 @@ def add_context_info(_: logging.Logger, __: str, event_dict: dict) -> dict:
     return event_dict
 
 
-def configure_logging(log_filename: str = "logs/application.log") -> None:
+def configure_logging(log_filename: str | None = None) -> None:
     # Set the level before which logs are ignored. 
     log_level = logging.INFO
 
@@ -42,17 +43,18 @@ def configure_logging(log_filename: str = "logs/application.log") -> None:
     root_logger.setLevel(log_level)
     root_logger.handlers.clear()
 
-    # Terminal logging disabled for now.
-    # formatter = logging.Formatter("%(message)s")
-    # stream_handler = logging.StreamHandler(sys.stdout)
-    # stream_handler.setFormatter(formatter)
-    # root_logger.addHandler(stream_handler)
+    formatter = logging.Formatter("%(message)s")
+
+    stream_handler = logging.StreamHandler(sys.stdout)
+    stream_handler.setFormatter(formatter)
+    root_logger.addHandler(stream_handler)
 
     # File logging 
+    log_filename = log_filename or os.getenv("LOG_FILE", "logs/application.log")
     file_path = Path(log_filename)
     file_path.parent.mkdir(parents=True, exist_ok=True)
     file_handler = logging.FileHandler(file_path, encoding="utf-8")
-    file_handler.setFormatter(logging.Formatter("%(message)s"))
+    file_handler.setFormatter(formatter)
     root_logger.addHandler(file_handler)
 
 
