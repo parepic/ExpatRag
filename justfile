@@ -37,3 +37,17 @@ store-news:
 # Chunk sources only (no ingest)
 chunk-pages:
     uv run --package data-pipeline python3 data_pipeline/scrape/chunk.py
+
+# Scrape IND pages and write a JSON snapshot to data_pipeline/data/ (no DB writes)
+# Pass --limit N to cap the number of pages, e.g.: just reindex --limit 5
+reindex *ARGS:
+    uv run --package data-pipeline python3 data_pipeline/diff_detector/snapshot.py {{ARGS}}
+
+# Run data pipeline tests
+test:
+    uv run --package data-pipeline pytest data_pipeline/tests/ -v
+
+# Compare D (Supabase sources) against D' (latest snapshot) and write a diff report
+# Pass --snapshot path/to/snapshot.json to use a specific snapshot file
+diff *ARGS:
+    uv run --package data-pipeline python3 data_pipeline/diff_detector/diff.py {{ARGS}}
