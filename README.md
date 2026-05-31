@@ -75,6 +75,62 @@ just frontend    # Next.js on :3000
 
 The database needs data before the app is useful — see **Data Pipeline** below.
 
+## Docker Local Development
+
+This setup runs the app in Docker while keeping Supabase managed by the Supabase
+CLI on your host machine.
+
+Start Supabase from the repo root:
+
+```bash
+npx supabase start
+```
+
+Make sure the root `.env` contains your local Supabase service role key and
+OpenAI key. Docker Compose reads this file, but overrides the Supabase URL for
+container networking:
+
+```env
+SUPABASE_API_URL=http://127.0.0.1:54321
+SUPABASE_SERVICE_KEY=          # from `npx supabase status` → service_role key
+OPENAI_API_KEY=
+FRONTEND_URL=http://localhost:3000
+```
+
+Run the backend and frontend containers:
+
+```bash
+docker compose up --build backend frontend
+```
+
+The containers use these local URLs:
+
+| Service | URL |
+|---|---|
+| Frontend | http://localhost:3000 |
+| Backend API | http://localhost:8000 |
+| Swagger UI | http://localhost:8000/docs |
+| Supabase API from containers | http://host.docker.internal:54321 |
+
+Populate Supabase from the pre-scraped local snapshot:
+
+```bash
+docker compose run --rm store-pages
+docker compose run --rm chunk-pages
+```
+
+Optional one-off jobs:
+
+```bash
+docker compose run --rm fetch-news
+docker compose run --rm store-news
+docker compose run --rm pipeline-full
+```
+
+`pipeline-full` runs the scraper and requires `SCRAPE_DO_TOKEN`. The other page
+population commands use `data_pipeline/data/documents.jsonl` and do not need the
+scraper token.
+
 ## Data Pipeline
 
 Scrapes IND.nl into JSONL, stores pages in Supabase, chunks and embeds them, then fetches IamExpat RSS news, classifies alert-worthy items, and stores selected news in Supabase.

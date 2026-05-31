@@ -1,0 +1,72 @@
+name: expatrag
+
+x-host-supabase: &host-supabase
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+
+x-python-env: &python-env
+  env_file:
+    - .env
+  environment:
+    SUPABASE_API_URL: http://host.docker.internal:54321
+    FRONTEND_URL: http://localhost:3000
+
+x-pipeline-service: &pipeline-service
+  <<: [*host-supabase, *python-env]
+  image: expatrag-data-pipeline
+  build:
+    context: .
+    dockerfile: data_pipeline/Dockerfile
+  profiles:
+    - pipeline
+  volumes:
+    - ./data_pipeline/data:/app/data_pipeline/data
+
+services:
+  backend:
+    <<: [*host-supabase, *python-env]
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app/backend
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    environment:
+      NEXT_PUBLIC_BACKEND_URL: http://localhost:8000
+      NEXT_TELEMETRY_DISABLED: "1"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app/frontend
+      - frontend_node_modules:/app/frontend/node_modules
+      - frontend_next:/app/frontend/.next
+
+  pipeline-full:
+    <<: *pipeline-service
+    command: ["python3", "data_pipeline/scrape/pipeline.py"]
+
+  store-pages:
+    <<: *pipeline-service
+    command: ["python3", "data_pipeline/scrape/ingest.py", "--skip-data-fetch"]
+
+  chunk-pages:
+    <<: *pipeline-service
+    command: ["python3", "data_pipeline/scrape/chunk.py"]
+
+  fetch-news:
+    <<: *pipeline-service
+    command: ["python3", "data_pipeline/news/ingest.py"]
+
+  store-news:
+    <<: *pipeline-service
+    command: ["python3", "data_pipeline/news/store.py"]
+
+volumes:
+  frontend_node_modules:
+  frontend_next:
