@@ -12,7 +12,7 @@ _pipeline_root = Path(__file__).resolve().parents[1]
 if str(_pipeline_root) not in sys.path:
     sys.path.insert(0, str(_pipeline_root))
 
-from lib.config import DATA_DIR, PAGE_LIMIT
+from lib.config import SNAPSHOT_DIR, PAGE_LIMIT
 from scrape.discovery import discover_pages
 from scrape.extractor import extract_documents
 from scrape.fetcher import fetch_pages
@@ -39,8 +39,9 @@ def snapshot(limit: int | None = None) -> Path:
         for doc in documents
     ]
 
+    SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    output_path = DATA_DIR / f"snapshot_{timestamp}.json"
+    output_path = SNAPSHOT_DIR / f"snapshot_{timestamp}.json"
     output_path.write_text(json.dumps(records, indent=2, ensure_ascii=False))
     print(f"Snapshot written to {output_path} ({len(records)} pages)")
     return output_path

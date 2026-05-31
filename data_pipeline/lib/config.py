@@ -8,6 +8,8 @@ load_pipeline_env()
 # --- Local data (JSONL under data_pipeline/data/) ---
 _DATA_PIPELINE_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = _DATA_PIPELINE_ROOT / "data"
+SNAPSHOT_DIR = DATA_DIR / "snapshots"
+DIFF_DIR = DATA_DIR / "diffs"
 DOCUMENTS_JSONL_PATH = DATA_DIR / "documents.jsonl"
 IAMEXPAT_NEWS_RSS_URL = "https://www.iamexpat.nl/rss/news-netherlands/news"
 NEWS_ITEMS_JSONL_PATH = DATA_DIR / "news_items.jsonl"
@@ -17,7 +19,7 @@ BASE_URL = "https://ind.nl"
 SITEMAP_PATH = "/en/sitemap"
 SCRAPE_DO_TOKEN = os.getenv("SCRAPE_DO_TOKEN")
 REQUEST_DELAY = 0.5
-PAGE_LIMIT = 100
+PAGE_LIMIT = None
 
 # --- Supabase ---
 SUPABASE_URL = os.getenv("SUPABASE_API_URL")
