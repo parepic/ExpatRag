@@ -5,7 +5,8 @@ CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    username TEXT UNIQUE NOT NULL,
+    -- username TEXT UNIQUE NOT NULL,
+    email TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL, -- stores bcrypt hash, never plaintext
     nationality TEXT,
     purpose_of_stay TEXT,
@@ -50,7 +51,7 @@ CREATE TABLE messages (
 CREATE TABLE project_settings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    embedding_model TEXT,
+    -- embedding_model TEXT,
     rag_strategy TEXT,
     agent_type TEXT,
     chunks_per_search INTEGER,
@@ -58,7 +59,7 @@ CREATE TABLE project_settings (
     similarity_threshold DECIMAL,
     number_of_queries INTEGER,
     reranking_enabled BOOLEAN,
-    reranking_model TEXT,
+    -- reranking_model TEXT,
     vector_weight DECIMAL,
     keyword_weight DECIMAL,
     created_at TIMESTAMPTZ DEFAULT now()
