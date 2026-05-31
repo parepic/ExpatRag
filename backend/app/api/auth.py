@@ -4,7 +4,11 @@ from datetime import datetime, timedelta, timezone
 import bcrypt
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Response
 
-from app.core.config import SESSION_COOKIE, SESSION_DURATION_DAYS
+from app.core.config import (
+    SESSION_COOKIE,
+    SESSION_COOKIE_SECURE,
+    SESSION_DURATION_DAYS,
+)
 from app.core.logging import get_logger, set_user_id
 from app.core.supabase_client import supabase
 from app.dependencies.auth import get_current_user
@@ -100,7 +104,7 @@ def login(body: LoginRequest, response: Response):
         key=SESSION_COOKIE,
         value=raw_token,
         httponly=True,
-        secure=True,
+        secure=SESSION_COOKIE_SECURE,
         samesite="lax",
         max_age=SESSION_DURATION_DAYS * 24 * 3600,
     )

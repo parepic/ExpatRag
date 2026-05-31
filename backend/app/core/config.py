@@ -1,8 +1,14 @@
 """Static backend configuration."""
 
+import os
 
 SESSION_COOKIE = "session_token"
 SESSION_DURATION_DAYS = 7
+SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "true").lower() in {
+    "1",
+    "true",
+    "yes",
+}
 
 
 EMBEDDING_MODEL = "text-embedding-3-small"

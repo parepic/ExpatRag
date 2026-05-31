@@ -8,9 +8,9 @@ x-python-env: &python-env
   env_file:
     - .env
   environment:
-    SUPABASE_API_URL: http://host.docker.internal:54321
     FRONTEND_URL: http://localhost:3000
     LOG_FILE: /app/logs/application.log
+    SESSION_COOKIE_SECURE: "false"
 
 x-pipeline-service: &pipeline-service
   <<: [*host-supabase, *python-env]
