@@ -20,7 +20,12 @@ if str(_pipeline_root) not in sys.path:
     sys.path.insert(0, str(_pipeline_root))
 
 from lib.config import IAMEXPAT_NEWS_RSS_URL, NEWS_ITEMS_JSONL_PATH
-from news.feed import fetch_rss_feed, filter_items_by_date, parse_rss_items
+from news.feed import (
+    fetch_rss_feed,
+    filter_items_by_date,
+    filter_items_by_lookback,
+    parse_rss_items,
+)
 
 
 def parse_date(value: str) -> date:
@@ -31,7 +36,7 @@ def parse_date(value: str) -> date:
         raise argparse.ArgumentTypeError(
             f"Expected date in YYYY-MM-DD format, got {value!r}"
         )
-    
+
 
 def parse_timezone(value: str) -> ZoneInfo:
     """Parse an IANA timezone name."""
@@ -60,9 +65,21 @@ def ingest_iamexpat_news(
     timezone: ZoneInfo = ZoneInfo("Europe/Amsterdam"),
     limit: int | None = None,
     include_all: bool = False,
+    lookback_hours: int | None = None,
+    now: datetime | None = None,
 ) -> list[dict]:
-    """Fetch IamExpat RSS news and write normalized items for the requested date."""
-    target_date = target_date or datetime.now(timezone).date()
+    """Fetch IamExpat RSS news and write normalized items for one selection mode."""
+    selected_modes = sum(
+        (
+            target_date is not None,
+            lookback_hours is not None,
+            include_all,
+        )
+    )
+    if selected_modes > 1:
+        raise ValueError(
+            "target_date, lookback_hours, and include_all are mutually exclusive."
+        )
 
     print(f"Fetching IamExpat news RSS: {feed_url}")
     feed_xml = fetch_rss_feed(feed_url)
@@ -71,7 +88,19 @@ def ingest_iamexpat_news(
     if include_all:
         selected_items = items
         print(f"Selected all {len(selected_items)} RSS items")
+    elif lookback_hours is not None:
+        selected_items = filter_items_by_lookback(
+            items,
+            hours=lookback_hours,
+            now=now,
+        )
+        print(
+            f"Selected {len(selected_items)} RSS items from the last "
+            f"{lookback_hours} hours"
+        )
     else:
+        current_time = now or datetime.now(timezone)
+        target_date = target_date or current_time.astimezone(timezone).date()
         selected_items = filter_items_by_date(
             items,
             target_date=target_date,
@@ -96,7 +125,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Fetch IamExpat RSS news and write normalized JSONL."
     )
-    parser.add_argument(
+    selection_group = parser.add_mutually_exclusive_group()
+    selection_group.add_argument(
         "--date",
         type=parse_date,
         default=None,
@@ -125,10 +155,16 @@ def main() -> None:
         default=ZoneInfo("Europe/Amsterdam"),
         help="Timezone used for the --date/today filter, default: Europe/Amsterdam.",
     )
-    parser.add_argument(
+    selection_group.add_argument(
         "--include-all",
         action="store_true",
         help="Write all RSS items instead of filtering to one publication date.",
+    )
+    selection_group.add_argument(
+        "--lookback-hours",
+        type=int,
+        default=None,
+        help="Write items published within the preceding number of hours.",
     )
     args = parser.parse_args()
 
@@ -139,6 +175,7 @@ def main() -> None:
         timezone=args.timezone,
         limit=args.limit,
         include_all=args.include_all,
+        lookback_hours=args.lookback_hours,
     )
 
 

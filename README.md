@@ -48,6 +48,8 @@ SUPABASE_API_URL=http://127.0.0.1:54321
 SUPABASE_SERVICE_KEY=          # from `npx supabase status` → service_role key
 OPENAI_API_KEY=                # required for embeddings and generation
 FRONTEND_URL=http://localhost:3000
+RESEND_API_KEY=                # Resend sending API key
+EMAIL_SENDER=                  # e.g. ExpatRag <news@yourdomain.com>
 
 # LangSmith — optional for tracing, required for running tests
 LANGSMITH_API_KEY=
@@ -124,6 +126,8 @@ Optional one-off jobs:
 ```bash
 docker compose run --rm fetch-news
 docker compose run --rm store-news
+docker compose run --rm send-news
+docker compose run --rm daily-news
 docker compose run --rm pipeline-full
 ```
 
@@ -141,7 +145,9 @@ just scrape-pages        # scrape → JSONL only (no DB writes)
 just store-pages         # existing page JSONL → Supabase sources table
 just chunk-pages         # chunk and embed already-stored pages
 just fetch-news          # IamExpat RSS → data_pipeline/data/news_items.jsonl
-just store-news          # classify JSONL news and store alert-worthy items
+just store-news          # deduplicate, classify, store, and write the fresh handoff
+just send-news           # email the fresh handoff to subscribed users
+just daily-news          # fetch recent news, store alerts, and email subscribers
 ```
 
 `data_pipeline/data/documents.jsonl` contains a pre-scraped snapshot, so you can run `just store-pages && just chunk-pages` without needing a `SCRAPE_DO_TOKEN`.
@@ -150,8 +156,21 @@ News fetch currently reads the IamExpat RSS feed and writes normalized items pub
 
 ```bash
 uv run --package data-pipeline python3 data_pipeline/news/ingest.py --date 2026-05-14
+uv run --package data-pipeline python3 data_pipeline/news/ingest.py --lookback-hours 48
 uv run --package data-pipeline python3 data_pipeline/news/ingest.py --include-all
 ```
+
+The news stages communicate through:
+
+- `data_pipeline/data/news_items.jsonl`: fetched and normalized RSS items.
+- `data_pipeline/data/new_alert_news_items.jsonl`: rows inserted by the latest
+  store run and eligible for standalone notification.
+
+`just daily-news` passes inserted rows directly in memory. Running `just
+send-news` again can resend the current handoff file.
+
+The Azure deployment commands for the scheduled digest are in
+[`docs/daily-news-azure.md`](docs/daily-news-azure.md).
 
 ## Testing
 

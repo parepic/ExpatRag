@@ -101,7 +101,12 @@ def main() -> None:
             print("Fetching news RSS into JSONL.")
             ingest_iamexpat_news(include_all=args.news_include_all)
 
-        store_news_from_jsonl(limit=args.news_limit)
+        result = store_news_from_jsonl(limit=args.news_limit)
+        print(
+            "News storage completed: "
+            f"loaded={result.loaded}, unseen={result.unseen}, "
+            f"selected={result.selected}, inserted={result.inserted}"
+        )
     else:
         print("Skipping news pipeline (--skip-news).")
 

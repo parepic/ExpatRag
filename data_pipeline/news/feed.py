@@ -5,7 +5,7 @@ from __future__ import annotations
 import html
 import xml.etree.ElementTree as ET
 from dataclasses import asdict, dataclass
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from email.utils import parsedate_to_datetime
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -114,6 +114,32 @@ def filter_items_by_date(
             continue
         published = datetime.fromisoformat(item.published_at)
         if published.astimezone(timezone).date() == target_date:
+            filtered.append(item)
+
+    return filtered
+
+
+def filter_items_by_lookback(
+    items: list[RssNewsItem],
+    *,
+    hours: int,
+    now: datetime | None = None,
+) -> list[RssNewsItem]:
+    """Keep items published within the preceding UTC lookback window."""
+    if hours < 0:
+        raise ValueError("Lookback hours must be non-negative.")
+
+    now = (now or datetime.now(UTC)).astimezone(UTC)
+    cutoff = now - timedelta(hours=hours)
+    filtered: list[RssNewsItem] = []
+
+    for item in items:
+        if item.published_at is None:
+            continue
+        published = datetime.fromisoformat(item.published_at)
+        if published.tzinfo is None:
+            published = published.replace(tzinfo=UTC)
+        if cutoff <= published.astimezone(UTC) <= now:
             filtered.append(item)
 
     return filtered

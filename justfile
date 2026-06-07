@@ -30,9 +30,17 @@ scrape-pages:
 fetch-news:
     uv run --package data-pipeline python3 data_pipeline/news/ingest.py
 
-# Classify existing news JSONL and store alert-worthy items → Supabase news_items
+# Deduplicate, classify, store, and write the fresh notification handoff
 store-news:
     uv run --package data-pipeline python3 data_pipeline/news/store.py
+
+# Email the fresh store-stage handoff to subscribed users
+send-news:
+    uv run --package data-pipeline python3 data_pipeline/news/notify.py
+
+# Fetch, classify, store, and email the daily news digest
+daily-news:
+    uv run --package data-pipeline python3 data_pipeline/news/daily.py
 
 # Chunk sources only (no ingest)
 chunk-pages:
