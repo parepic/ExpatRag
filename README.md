@@ -49,7 +49,7 @@ SUPABASE_SERVICE_KEY=          # from `npx supabase status` → service_role key
 OPENAI_API_KEY=                # required for embeddings and generation
 FRONTEND_URL=http://localhost:3000
 RESEND_API_KEY=                # Resend sending API key
-EMAIL_SENDER=                  # e.g. ExpatRag <news@yourdomain.com>
+EMAIL_SENDER=                  # e.g. Patty <news@updates.heypatty.nl>
 
 # LangSmith — optional for tracing, required for running tests
 LANGSMITH_API_KEY=
@@ -59,6 +59,9 @@ LANGSMITH_PROJECT=expatrag
 # Required only if running the web scraper (not needed for store-pages)
 SCRAPE_DO_TOKEN=
 ```
+
+Resend uses the verified `updates.heypatty.nl` subdomain for outgoing email.
+Sender addresses can use any local part, such as `news@updates.heypatty.nl`.
 
 **`frontend/.env.local`**:
 
