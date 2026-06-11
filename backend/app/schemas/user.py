@@ -14,13 +14,16 @@ class UpdateUserRequest(BaseModel):
     languages: str | None = None
 
 
+class NotificationSettings(BaseModel):
+    daily_news_email_enabled: bool
+
 
 class ProjectSettings(BaseModel):
     rag_strategy: str | None = None
-    agent_type: str | None = None 
+    agent_type: str | None = None
     chunks_per_search: int | None = None
     final_context_size: int | None = None
-    similarity_threshold: float | None = None 
+    similarity_threshold: float | None = None
     number_of_queries: int | None = None
     vector_weight: float | None = None
     keyword_weight: float | None = None

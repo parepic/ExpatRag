@@ -1,0 +1,53 @@
+"""Run the three-stage MVP daily news pipeline."""
+
+from __future__ import annotations
+
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+
+_pipeline_root = Path(__file__).resolve().parents[1]
+if str(_pipeline_root) not in sys.path:
+    sys.path.insert(0, str(_pipeline_root))
+
+from news.ingest import ingest_iamexpat_news
+from news.notify import NotificationStats, send_news_digest_to_subscribers
+from news.store import StoreNewsResult, store_news_from_jsonl
+
+
+@dataclass(slots=True)
+class DailyNewsResult:
+    fetched: int
+    store: StoreNewsResult
+    notifications: NotificationStats
+
+
+def run_daily_news() -> DailyNewsResult:
+    """Fetch 48 hours, store unseen alerts, then notify using inserted rows."""
+    fetched_items = ingest_iamexpat_news(lookback_hours=48)
+    store_result = store_news_from_jsonl()
+    notification_stats = send_news_digest_to_subscribers(
+        store_result.inserted_rows
+    )
+    return DailyNewsResult(
+        fetched=len(fetched_items),
+        store=store_result,
+        notifications=notification_stats,
+    )
+
+
+def main() -> None:
+    result = run_daily_news()
+    print(
+        "Daily news complete: "
+        f"fetched={result.fetched}, loaded={result.store.loaded}, "
+        f"unseen={result.store.unseen}, selected={result.store.selected}, "
+        f"inserted={result.store.inserted}, "
+        f"recipients={result.notifications.recipients}, "
+        f"sent={result.notifications.sent}, "
+        f"failed={result.notifications.failed}"
+    )
+
+
+if __name__ == "__main__":
+    main()

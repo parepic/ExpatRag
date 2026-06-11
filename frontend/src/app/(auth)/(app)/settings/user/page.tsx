@@ -6,7 +6,11 @@ import { ChipSelect } from "@/components/onboarding/ChipSelect";
 import { YesNoToggle } from "@/components/onboarding/YesNoToggle";
 import { Button } from "@/components/ui/button";
 import { useAuthContext } from "@/context/AuthContext";
-import { updateUser } from "@/lib/api/users";
+import {
+  getNotificationSettings,
+  updateNotificationSettings,
+  updateUser,
+} from "@/lib/api/users";
 import { USER_SETTINGS_FIELDS } from "@/lib/settings/profile-fields";
 import type { AuthUser, UserProfile, UserProfileKey } from "@/lib/types/user";
 
@@ -44,10 +48,36 @@ export default function UserSettingsPage() {
   );
   const [errorMessage, setErrorMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [dailyNewsEmailEnabled, setDailyNewsEmailEnabled] = useState(false);
+  const [savedDailyNewsEmailEnabled, setSavedDailyNewsEmailEnabled] =
+    useState(false);
 
   useEffect(() => {
     console.log("[settings/user] AuthContext user changed:", user);
   }, [user]);
+
+  useEffect(() => {
+    let active = true;
+
+    getNotificationSettings()
+      .then((settings) => {
+        if (!active) return;
+        setDailyNewsEmailEnabled(settings.daily_news_email_enabled);
+        setSavedDailyNewsEmailEnabled(settings.daily_news_email_enabled);
+      })
+      .catch((error) => {
+        if (!active) return;
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Failed to load notification settings",
+        );
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     setSavedSettings(createUserSettingsDraft(user));
@@ -66,12 +96,14 @@ export default function UserSettingsPage() {
   function handleEdit() {
     setErrorMessage("");
     setDraftSettings(savedSettings);
+    setDailyNewsEmailEnabled(savedDailyNewsEmailEnabled);
     setIsEditing(true);
   }
 
   function handleCancel() {
     setErrorMessage("");
     setDraftSettings(savedSettings);
+    setDailyNewsEmailEnabled(savedDailyNewsEmailEnabled);
     setIsEditing(false);
   }
 
@@ -81,8 +113,14 @@ export default function UserSettingsPage() {
     console.log("[settings/user] AuthContext user before save:", user);
 
     try {
-      await updateUser(draftSettings);
+      await Promise.all([
+        updateUser(draftSettings),
+        updateNotificationSettings({
+          daily_news_email_enabled: dailyNewsEmailEnabled,
+        }),
+      ]);
       setSavedSettings(draftSettings);
+      setSavedDailyNewsEmailEnabled(dailyNewsEmailEnabled);
       setIsEditing(false);
       console.log(
         "[settings/user] Save succeeded. AuthContext user after save:",
@@ -186,6 +224,33 @@ export default function UserSettingsPage() {
               </div>
             );
           })}
+
+          <div className="rounded-2xl border border-border bg-background px-4 py-4">
+            <p className="text-sm font-medium text-foreground">
+              Daily news email
+            </p>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+              Receive one email when ExpatRag finds relevant news for expats in
+              the Netherlands.
+            </p>
+
+            <label className="mt-4 flex items-center gap-3 text-sm text-foreground">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-border"
+                checked={
+                  isEditing
+                    ? dailyNewsEmailEnabled
+                    : savedDailyNewsEmailEnabled
+                }
+                disabled={!isEditing}
+                onChange={(event) =>
+                  setDailyNewsEmailEnabled(event.target.checked)
+                }
+              />
+              Receive daily news emails
+            </label>
+          </div>
         </div>
       </div>
     </main>

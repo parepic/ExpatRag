@@ -1,0 +1,2 @@
+ALTER TABLE users
+ADD COLUMN daily_news_email_enabled BOOLEAN NOT NULL DEFAULT TRUE;

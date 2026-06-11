@@ -13,6 +13,7 @@ DIFF_DIR = DATA_DIR / "diffs"
 DOCUMENTS_JSONL_PATH = DATA_DIR / "documents.jsonl"
 IAMEXPAT_NEWS_RSS_URL = "https://www.iamexpat.nl/rss/news-netherlands/news"
 NEWS_ITEMS_JSONL_PATH = DATA_DIR / "news_items.jsonl"
+NEW_ALERT_NEWS_ITEMS_JSONL_PATH = DATA_DIR / "new_alert_news_items.jsonl"
 
 # --- Scraper ---
 BASE_URL = "https://ind.nl"
