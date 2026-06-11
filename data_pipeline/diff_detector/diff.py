@@ -6,8 +6,10 @@ import argparse
 import difflib
 import json
 import sys
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Literal
 
 _pipeline_root = Path(__file__).resolve().parents[1]
 if str(_pipeline_root) not in sys.path:
@@ -15,6 +17,14 @@ if str(_pipeline_root) not in sys.path:
 
 from lib.config import DIFF_DIR, SNAPSHOT_DIR
 from lib.supabase_client import get_supabase_client
+
+
+@dataclass(slots=True)
+class PageDiff:
+    url: str
+    change_type: Literal["CHANGED", "ADDED", "REMOVED"]
+    unified_diff: str  # non-empty for CHANGED; empty string otherwise
+    content: str       # new content for CHANGED/ADDED; old content for REMOVED
 
 
 def load_corpus() -> dict[str, str]:
@@ -61,12 +71,10 @@ def load_snapshot(path: Path | None = None) -> dict[str, str]:
     return {r["url"]: r["content"] for r in records if r.get("content")}
 
 
-def run_diff(corpus: dict[str, str], snapshot: dict[str, str]) -> str:
-    """Compare corpus and snapshot, classify pages, and return the full report as a string."""
+def run_diff(corpus: dict[str, str], snapshot: dict[str, str]) -> list[PageDiff]:
+    """Compare corpus and snapshot and return a structured list of page-level changes."""
     all_urls = sorted(set(corpus) | set(snapshot))
-    sections: list[str] = []
-
-    changed = added = removed = unchanged = 0
+    diffs: list[PageDiff] = []
 
     for url in all_urls:
         in_corpus = url in corpus
@@ -75,23 +83,52 @@ def run_diff(corpus: dict[str, str], snapshot: dict[str, str]) -> str:
         if in_corpus and in_snapshot:
             old_lines = corpus[url].splitlines(keepends=True)
             new_lines = snapshot[url].splitlines(keepends=True)
-            diff = list(difflib.unified_diff(old_lines, new_lines, fromfile="corpus", tofile="snapshot"))
-            if diff:
-                sections.append(f"=== CHANGED: {url} ===\n" + "".join(diff))
-                changed += 1
-            else:
-                unchanged += 1
+            diff_lines = list(
+                difflib.unified_diff(old_lines, new_lines, fromfile="corpus", tofile="snapshot")
+            )
+            if diff_lines:
+                diffs.append(PageDiff(
+                    url=url,
+                    change_type="CHANGED",
+                    unified_diff="".join(diff_lines),
+                    content=snapshot[url],
+                ))
         elif in_snapshot:
-            sections.append(f"=== ADDED: {url} ===")
-            added += 1
+            new_lines = snapshot[url].splitlines(keepends=True)
+            diffs.append(PageDiff(
+                url=url,
+                change_type="ADDED",
+                unified_diff="".join(f"+{line}" for line in new_lines),
+                content=snapshot[url],
+            ))
         else:
-            sections.append(f"=== REMOVED: {url} ===")
-            removed += 1
+            old_lines = corpus[url].splitlines(keepends=True)
+            diffs.append(PageDiff(
+                url=url,
+                change_type="REMOVED",
+                unified_diff="".join(f"-{line}" for line in old_lines),
+                content=corpus[url],
+            ))
+
+    return diffs
+
+
+def render_report(diffs: list[PageDiff], total_pages: int) -> str:
+    """Render a human-readable diff report. Only CHANGED pages are shown in the body."""
+    changed = sum(1 for d in diffs if d.change_type == "CHANGED")
+    added = sum(1 for d in diffs if d.change_type == "ADDED")
+    removed = sum(1 for d in diffs if d.change_type == "REMOVED")
+    unchanged = total_pages - len(diffs)
 
     summary = (
         f"Summary: {changed} changed, {added} added, {removed} removed, {unchanged} unchanged "
-        f"({len(all_urls)} total pages)\n"
+        f"({total_pages} total pages)\n"
     )
+    sections = [
+        f"=== CHANGED: {d.url} ===\n{d.unified_diff}"
+        for d in diffs
+        if d.change_type == "CHANGED"
+    ]
     return summary + "\n" + "\n\n".join(sections)
 
 
@@ -118,8 +155,10 @@ def main() -> None:
     args = parser.parse_args()
 
     corpus = load_corpus()
-    snapshot = load_snapshot(args.snapshot)
-    report = run_diff(corpus, snapshot)
+    snapshot_data = load_snapshot(args.snapshot)
+    total_pages = len(set(corpus) | set(snapshot_data))
+    diffs = run_diff(corpus, snapshot_data)
+    report = render_report(diffs, total_pages)
     write_report(report)
 
 
