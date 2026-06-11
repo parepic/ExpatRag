@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from diff_detector.diff import load_corpus, run_diff
+from diff_detector.diff import load_corpus, render_report, run_diff
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -31,5 +31,6 @@ def test_ind_diff_db_matches_golden():
         if r.get("content")
     }
 
+    total = len(set(corpus) | set(snapshot))
     expected = (FIXTURES / "ind_diff_db_expected.txt").read_text()
-    assert run_diff(corpus, snapshot) == expected
+    assert render_report(run_diff(corpus, snapshot), total) == expected
