@@ -175,6 +175,26 @@ send-news` again can resend the current handoff file.
 The Azure deployment commands for the scheduled digest are in
 [`docs/daily-news-azure.md`](docs/daily-news-azure.md).
 
+### IND diff notification pipeline
+
+Detects changes to IND.nl since the last ingestion, summarises them with an LLM, and emails each user the changes relevant to their profile.
+
+```bash
+# Full pipeline: scrape → diff → summarise → classify → notify users
+uv run --package data-pipeline python3 data_pipeline/diff_detector/pipeline.py
+
+# Limit pages scraped (faster for local testing)
+uv run --package data-pipeline python3 data_pipeline/diff_detector/pipeline.py --limit 10
+
+# Dry run: renders emails and prints recipient count but does not send
+uv run --package data-pipeline python3 data_pipeline/diff_detector/pipeline.py --dry-run
+
+# Send a test email to all users in the local DB using a hardcoded relevance map (no LLM calls)
+uv run --package data-pipeline python3 data_pipeline/diff_detector/send_test_email.py
+```
+
+Requires `OPENAI_API_KEY`, `RESEND_API_KEY`, and `EMAIL_SENDER` in `.env`. For local dev set `EMAIL_SENDER=onboarding@resend.dev` — no domain verification needed. For production use an address on a domain verified in your Resend account.
+
 ## Testing
 
 Tests run the full RAG pipeline against a golden dataset of 10 Q&A pairs and score results with two LLM-as-judge evaluators:

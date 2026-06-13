@@ -71,6 +71,11 @@ def load_snapshot(path: Path | None = None) -> dict[str, str]:
     return {r["url"]: r["content"] for r in records if r.get("content")}
 
 
+def load_snapshot_records(path: Path) -> list[dict]:
+    """Load full snapshot records (url, title, content, scraped_at) from a snapshot JSON file."""
+    return [r for r in json.loads(path.read_text()) if r.get("content")]
+
+
 def run_diff(corpus: dict[str, str], snapshot: dict[str, str]) -> list[PageDiff]:
     """Compare corpus and snapshot and return a structured list of page-level changes."""
     all_urls = sorted(set(corpus) | set(snapshot))

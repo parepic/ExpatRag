@@ -20,11 +20,13 @@ if str(_pipeline_root) not in sys.path:
     sys.path.insert(0, str(_pipeline_root))
 
 from diff_detector.classify import RelevanceMap, build_relevance_map
-from diff_detector.diff import PageDiff, load_corpus, load_snapshot, run_diff
+from diff_detector.diff import PageDiff, load_corpus, load_snapshot, load_snapshot_records, run_diff
 from diff_detector.notify import notify_users
 from diff_detector.snapshot import snapshot
 from diff_detector.summarize import PageDiffSummary, summarize_page_diffs
 from lib.supabase_client import get_supabase_client
+from scrape.chunk import chunk_sources
+from scrape.store import store_documents
 
 
 @dataclass(slots=True)
@@ -92,9 +94,26 @@ def run_ind_diff_pipeline(
         f"sent={stats.sent}, failed={stats.failed}"
     )
 
-    # Step 6 — update corpus (TODO)
-    # Once this lands, upsert changed/added pages back to the sources table and
-    # re-chunk/re-embed so the RAG chatbot reflects the updated IND content.
+    # Step 6 — update corpus
+    # Commented out until the pipeline has been validated end-to-end in production.
+    # Uncomment once confident the diff/summarise/classify/notify chain is stable.
+    #
+    # print("Step 6/6: Updating corpus...")
+    # changed_urls = {d.url for d in diffs if d.change_type in ("CHANGED", "ADDED")}
+    # snapshot_records = load_snapshot_records(snapshot_path)
+    # changed_docs = [r for r in snapshot_records if r["url"] in changed_urls]
+    # store_documents(changed_docs)  # upsert changed/added pages to sources table
+    #
+    # # Re-chunk each updated source by its DB id so the RAG index stays current
+    # rows = (
+    #     client.table("sources")
+    #     .select("id, source_url")
+    #     .in_("source_url", list(changed_urls))
+    #     .execute()
+    #     .data or []
+    # )
+    # for row in rows:
+    #     chunk_sources(source_id=row["id"], override_chunks=True)
 
     return INDDiffPipelineResult(
         snapshot_path=snapshot_path,
