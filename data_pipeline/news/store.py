@@ -1,14 +1,10 @@
-"""Classify RSS news JSONL and store alert-worthy items in Supabase.
-
-From repo root:
-
-    uv run --package data-pipeline python3 data_pipeline/news/store.py
-"""
+"""Classify unseen RSS news and store alert-worthy items in Supabase."""
 
 from __future__ import annotations
 
 import argparse
 import sys
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -17,10 +13,25 @@ _pipeline_root = Path(__file__).resolve().parents[1]
 if str(_pipeline_root) not in sys.path:
     sys.path.insert(0, str(_pipeline_root))
 
-from lib.config import NEWS_ITEMS_JSONL_PATH
-from lib.jsonl import load_documents_from_jsonl
+from lib.config import (
+    NEW_ALERT_NEWS_ITEMS_JSONL_PATH,
+    NEWS_ITEMS_JSONL_PATH,
+)
+from lib.jsonl import load_documents_from_jsonl, write_documents_jsonl
 from lib.supabase_client import get_supabase_client
 from news.alerts import NewsAlertDecision, classify_news_items
+
+
+@dataclass(slots=True)
+class StoreNewsResult:
+    loaded: int = 0
+    unseen: int = 0
+    selected: int = 0
+    inserted_rows: list[dict[str, Any]] = field(default_factory=list)
+
+    @property
+    def inserted(self) -> int:
+        return len(self.inserted_rows)
 
 
 def build_news_row(item: dict[str, Any], decision: NewsAlertDecision) -> dict[str, Any]:
@@ -51,64 +62,103 @@ def build_news_row(item: dict[str, Any], decision: NewsAlertDecision) -> dict[st
     }
 
 
-def store_alert_news_items(rows: list[dict[str, Any]]) -> int:
-    """Upsert selected alert-worthy news items into Supabase."""
+def load_existing_news_urls(client: Any, urls: list[str]) -> set[str]:
+    """Return candidate URLs already present in news_items."""
+    existing: set[str] = set()
+    unique_urls = sorted({url for url in urls if url})
+
+    for start in range(0, len(unique_urls), 100):
+        batch = unique_urls[start : start + 100]
+        rows = (
+            client.table("news_items")
+            .select("source_url")
+            .in_("source_url", batch)
+            .execute()
+            .data
+            or []
+        )
+        existing.update(row["source_url"] for row in rows)
+
+    return existing
+
+
+def store_alert_news_items(
+    rows: list[dict[str, Any]],
+    *,
+    client: Any | None = None,
+) -> list[dict[str, Any]]:
+    """Insert one atomic batch and return the rows confirmed by Supabase."""
     if not rows:
         print("No alert-worthy news items to store.")
-        return 0
+        return []
 
-    client = get_supabase_client()
-    batch_size = 50
-    written = 0
-
-    for i in range(0, len(rows), batch_size):
-        batch = rows[i : i + batch_size]
-        client.table("news_items").upsert(
-            batch,
-            on_conflict="source_url",
-        ).execute()
-        written += len(batch)
-        print(f"  Upserted {written}/{len(rows)} alert news rows")
-
-    print(f"Stored {written} alert-worthy news items in news_items table")
-    return written
+    client = client or get_supabase_client()
+    response = client.table("news_items").insert(rows).execute()
+    inserted_rows = response.data or []
+    print(f"Stored {len(inserted_rows)} alert-worthy news items")
+    return inserted_rows
 
 
 def store_news_from_jsonl(
     *,
     path: Path = NEWS_ITEMS_JSONL_PATH,
+    output_path: Path = NEW_ALERT_NEWS_ITEMS_JSONL_PATH,
     dry_run: bool = False,
     limit: int | None = None,
-) -> int:
-    """Read RSS news JSONL, classify items, and store alert-worthy entries."""
+    client: Any | None = None,
+) -> StoreNewsResult:
+    """Deduplicate, classify, store, and write the fresh notification handoff."""
+    write_documents_jsonl(output_path, [])
+
     items = load_documents_from_jsonl(path)
     if limit is not None:
         items = items[: max(limit, 0)]
 
-    print(f"Loaded {len(items)} news items from {path}")
-    classified = classify_news_items(items)
+    result = StoreNewsResult(loaded=len(items))
+    print(f"Loaded {result.loaded} news items from {path}")
+    if not items:
+        return result
 
+    client = client or get_supabase_client()
+    existing_urls = load_existing_news_urls(
+        client,
+        [str(item.get("url") or "") for item in items],
+    )
+    unseen_items = [
+        item
+        for item in items
+        if item.get("url") and item["url"] not in existing_urls
+    ]
+    result.unseen = len(unseen_items)
+    print(f"Selected {result.unseen}/{result.loaded} unseen news items")
+    if not unseen_items:
+        return result
+
+    classified = classify_news_items(unseen_items)
     selected_rows = [
         build_news_row(item, decision)
         for item, decision in classified
         if decision.alert == 1
     ]
-    print(f"Selected {len(selected_rows)}/{len(items)} alert-worthy news items")
+    result.selected = len(selected_rows)
+    print(f"Selected {result.selected}/{result.unseen} alert-worthy news items")
 
     if dry_run:
         for row in selected_rows:
             print(f"  DRY RUN alert: {row['title']} ({row['source_url']})")
-        print("Skipping Supabase store (--dry-run).")
-        return len(selected_rows)
+        print("Skipping Supabase store and handoff write (--dry-run).")
+        return result
 
-    return store_alert_news_items(selected_rows)
+    result.inserted_rows = store_alert_news_items(selected_rows, client=client)
+    write_documents_jsonl(output_path, result.inserted_rows)
+    return result
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
         description=(
-            "Read data_pipeline/data/news_items.jsonl, classify with Patty Watch "
-            "LLM1, and store alert-worthy items in Supabase."
+            "Read news JSONL, skip stored URLs, classify unseen items, and "
+            "store alert-worthy entries in Supabase."
         )
     )
     parser.add_argument(
@@ -118,24 +168,38 @@ def main() -> None:
         help=f"Input news JSONL path, default: {NEWS_ITEMS_JSONL_PATH}",
     )
     parser.add_argument(
+        "--output",
+        type=Path,
+        default=NEW_ALERT_NEWS_ITEMS_JSONL_PATH,
+        help=(
+            "Freshly inserted news JSONL handoff, default: "
+            f"{NEW_ALERT_NEWS_ITEMS_JSONL_PATH}"
+        ),
+    )
+    parser.add_argument(
         "--limit",
         type=int,
         default=None,
-        help="Maximum number of news items to classify.",
+        help="Maximum number of input news items to consider.",
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Classify and print selected items without writing to Supabase.",
+        help="Classify without writing to Supabase or the notification handoff.",
     )
     args = parser.parse_args()
 
-    stored = store_news_from_jsonl(
+    result = store_news_from_jsonl(
         path=args.input,
+        output_path=args.output,
         dry_run=args.dry_run,
         limit=args.limit,
     )
-    print(f"News store complete: {stored} rows")
+    print(
+        "News store complete: "
+        f"loaded={result.loaded}, unseen={result.unseen}, "
+        f"selected={result.selected}, inserted={result.inserted}"
+    )
 
 
 if __name__ == "__main__":

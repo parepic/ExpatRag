@@ -52,3 +52,6 @@ logs/
 notebooks/
 
 data_pipeline/data/
+
+
+azure/*.yaml
