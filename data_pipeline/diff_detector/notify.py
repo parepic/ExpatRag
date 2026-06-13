@@ -1,177 +1,107 @@
-"""Email rendering for IND diff notifications.
-
-Sending and user querying are NOT here — those depend on the ind_diff_email_enabled
-DB migration (in a separate branch). Once that lands, wire up:
-  - TODO: query Supabase for users where ind_diff_email_enabled = TRUE
-  - TODO: for each user call render_ind_diff_email and send via email_client.py
-"""
+"""IND diff notification sender — loads users, renders emails, sends via Resend."""
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from typing import Any
+
+import resend
+
 from diff_detector.classify import RelevanceMap
-from lib.user_attributes import USER_PROFILE_ATTRIBUTES
+from diff_detector.email_renderer import render_ind_diff_email
+from lib.email_client import configure_email_client, get_email_sender_address
+from lib.models import User
+from lib.supabase_client import get_supabase_client
 
-_BOOL_SECTION_HEADERS: dict[str, dict[bool, str]] = {
-    "has_fiscal_partner": {True: "someone with a fiscal partner", False: "someone without a fiscal partner"},
-    "age_bracket_under_30": {True: "someone under 30", False: "someone 30 or older"},
-    "prior_nl_residency": {True: "someone who previously lived in the Netherlands", False: "someone without prior NL residency"},
-}
-
-
-def _resolve_value_label(attribute: str, value: str | bool) -> str:
-    """Return a display label for a profile value (never prints True/False)."""
-    if isinstance(value, bool):
-        return _BOOL_SECTION_HEADERS.get(attribute, {}).get(value, str(value))
-    return str(value)
+_USER_COLUMNS = (
+    "id, email, nationality, purpose_of_stay, employment_status, "
+    "registration_status, has_fiscal_partner, salary_band, "
+    "age_bracket_under_30, prior_nl_residency"
+)
 
 
-def get_user_bullets(user: dict, relevance_map: RelevanceMap) -> dict[str, list[str]]:
-    """Return {value_label: [bullets]} for every attribute where this user has relevant changes.
-
-    Keys are human-readable value labels (e.g. "Highly Skilled Migrant", "someone under 30").
-    Bullets that appear in more than one slot are only kept in the first one to avoid repetition.
-    """
-    result: dict[str, list[str]] = {}
-    seen: set[str] = set()
-
-    for attribute in USER_PROFILE_ATTRIBUTES:
-        user_value = user.get(attribute)
-        if user_value is None:
-            continue
-        slot = relevance_map.get(attribute, {}).get(user_value, [])
-        fresh = [b for b in slot if b not in seen]
-        if fresh:
-            result[_resolve_value_label(attribute, user_value)] = fresh
-            seen.update(fresh)
-
-    return result
+@dataclass(slots=True)
+class NotifyStats:
+    recipients: int = 0
+    sent: int = 0
+    failed: int = 0
 
 
-def render_ind_diff_email(
-    user: dict, relevance_map: RelevanceMap
-) -> tuple[str, str, str] | None:
-    """Render a personalised IND diff notification email for one user.
+def load_all_users(client: Any) -> list[User]:
+    """Load all users who have an email address, paginated."""
+    users: list[User] = []
+    page_size = 200
+    offset = 0
 
-    Returns (subject, plain_text, html) or None if no changes are relevant to this user
-    (so callers can skip sending entirely).
-    """
-    sections = get_user_bullets(user, relevance_map)
-    if not sections:
-        return None
-
-    subject = "IND update: immigration policy changes relevant to you"
-
-    # --- Plain text ---
-    lines: list[str] = [
-        "IND POLICY UPDATE",
-        "",
-        "We detected changes to the IND (Dutch Immigration and Naturalisation Service)",
-        "website that may be relevant to your profile.",
-        "",
-    ]
-    for value_label, bullets in sections.items():
-        lines.append(f"As {value_label}:")
-        for bullet in bullets:
-            lines.append(f"  • {bullet}")
-        lines.append("")
-    # lines += [
-    #     "—",
-    #     "You're receiving this because you opted in to IND policy update notifications.",
-    #     "Visit https://patty.nl to update your preferences.",
-    # ]
-    plain_text = "\n".join(lines)
-
-    # --- HTML ---
-    sections_html_parts: list[str] = []
-    for value_label, bullets in sections.items():
-        # TODO: "As €60,000 - €80,000" reads awkwardly — consider per-attribute header templates
-        header = f"As {value_label}"
-        bullet_items = "\n".join(f"            <li>{b}</li>" for b in bullets)
-        sections_html_parts.append(
-            f'        <div class="section">\n'
-            f"          <h3>{header}</h3>\n"
-            f"          <ul>\n"
-            f"{bullet_items}\n"
-            f"          </ul>\n"
-            f"        </div>"
+    while True:
+        rows = (
+            client.table("users")
+            .select(_USER_COLUMNS)
+            .order("created_at")
+            .range(offset, offset + page_size - 1)
+            .execute()
+            .data
+            or []
         )
-    sections_html = "\n".join(sections_html_parts)
+        users.extend(User.model_validate(row) for row in rows if row.get("email"))
+        if len(rows) < page_size:
+            break
+        offset += page_size
 
-    html = f"""\
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IND Policy Update</title>
-  <style>
-    body {{
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      color: #1a1a1a;
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 24px 16px;
-      background: #f4f4f5;
-    }}
-    .card {{
-      background: white;
-      border-radius: 10px;
-      overflow: hidden;
-      box-shadow: 0 1px 4px rgba(0,0,0,.08);
-    }}
-    .header {{
-      background: #003082;
-      color: white;
-      padding: 24px 28px;
-    }}
-    .header h1 {{ margin: 0; font-size: 20px; font-weight: 700; }}
-    .header p {{ margin: 6px 0 0; font-size: 13px; opacity: .8; }}
-    .body {{ padding: 24px 28px; }}
-    .intro {{ margin: 0 0 20px; color: #444; line-height: 1.6; }}
-    .section {{
-      border: 1px solid #e8e8ea;
-      border-radius: 7px;
-      padding: 16px 18px;
-      margin-bottom: 14px;
-    }}
-    .section h3 {{
-      margin: 0 0 10px;
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: .6px;
-      color: #003082;
-    }}
-    .section ul {{ margin: 0; padding-left: 18px; }}
-    .section li {{ margin-bottom: 6px; line-height: 1.55; color: #333; }}
-    .footer {{
-      font-size: 12px;
-      color: #999;
-      text-align: center;
-      padding: 18px 28px;
-      border-top: 1px solid #f0f0f0;
-    }}
-    .footer a {{ color: #003082; text-decoration: none; }}
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="header">
-      <h1>IND Policy Update</h1>
-      <p>Changes to Dutch immigration rules relevant to your profile</p>
-    </div>
-    <div class="body">
-      <p class="intro">
-        We detected changes to the IND website. Here&rsquo;s what may affect you:
-      </p>
-{sections_html}
-    </div>
-    <div class="footer">
-      You&rsquo;re receiving this because you opted in to IND policy update notifications.<br>
-      <a href="https://patty.nl">Visit Patty</a> to manage your preferences.
-    </div>
-  </div>
-</body>
-</html>"""
+    return users
 
-    return subject, plain_text, html
+
+def _send_ind_diff_email(*, recipient: str, subject: str, plain_text: str, html: str) -> str | None:
+    params: resend.Emails.SendParams = {
+        "from": get_email_sender_address(),
+        "to": [recipient],
+        "subject": subject,
+        "text": plain_text,
+        "html": html,
+    }
+    result = resend.Emails.send(params)
+    return result.get("id")
+
+
+def notify_users(
+    relevance_map: RelevanceMap,
+    client: Any | None = None,
+    *,
+    dry_run: bool = False,
+) -> NotifyStats:
+    """Load all users, render a personalised email for each, and send via Resend.
+
+    Users with no relevant changes are skipped automatically (render_ind_diff_email
+    returns None for them). Passing dry_run=True renders emails but skips sending.
+    """
+    configure_email_client()
+    client = client or get_supabase_client()
+
+    users = load_all_users(client)
+    stats = NotifyStats(recipients=len(users))
+
+    for user in users:
+        rendered = render_ind_diff_email(user.model_dump(), relevance_map)
+        if rendered is None:
+            continue
+
+        subject, plain_text, html = rendered
+
+        if dry_run:
+            print(f"  [dry-run] would send to {user.email}")
+            stats.sent += 1
+            continue
+
+        try:
+            _send_ind_diff_email(
+                recipient=user.email,
+                subject=subject,
+                plain_text=plain_text,
+                html=html,
+            )
+            stats.sent += 1
+        except Exception as exc:
+            print(f"  Failed to send to {user.email}: {exc}")
+            stats.failed += 1
+
+    return stats

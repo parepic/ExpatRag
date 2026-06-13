@@ -9,7 +9,7 @@ import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 _pipeline_root = Path(__file__).resolve().parents[1]
 if str(_pipeline_root) not in sys.path:
@@ -27,9 +27,9 @@ class PageDiff:
     content: str       # new content for CHANGED/ADDED; old content for REMOVED
 
 
-def load_corpus() -> dict[str, str]:
+def load_corpus(client: Any | None = None) -> dict[str, str]:
     """Load full page text for all sources from Supabase. Returns {url: content}."""
-    client = get_supabase_client()
+    client = client or get_supabase_client()
     result: dict[str, str] = {}
     page_size = 200
     offset = 0

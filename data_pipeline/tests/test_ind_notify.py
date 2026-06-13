@@ -6,7 +6,7 @@ To visually inspect the rendered email output, run:
     uv run --package data-pipeline pytest data_pipeline/tests/test_ind_notify.py -v -s -k preview
 """
 
-from diff_detector.notify import get_user_bullets, render_ind_diff_email
+from diff_detector.email_renderer import get_user_bullets, render_ind_diff_email
 
 BULLET_A = "The RVO point threshold for sponsors increased from 50 to 65."
 BULLET_B = "The penalty lookback window decreased from 4 to 3 years."
