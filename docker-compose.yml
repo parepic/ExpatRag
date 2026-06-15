@@ -80,6 +80,10 @@ services:
     <<: *pipeline-service
     command: ["python3", "data_pipeline/news/daily.py"]
 
+  ind-diff-notify:
+    <<: *pipeline-service
+    command: ["python3", "data_pipeline/diff_detector/pipeline.py"]
+
 volumes:
   frontend_node_modules:
   frontend_next:
