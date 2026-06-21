@@ -15,6 +15,7 @@ class User(BaseModel):
     prior_nl_residency: bool | None = None
     languages: str | None = None
     daily_news_email_enabled: bool = False
+    ind_diff_email_enabled: bool = False
 
 
 class UpdateUserRequest(BaseModel):
@@ -28,10 +29,8 @@ class UpdateUserRequest(BaseModel):
     age_bracket_under_30: bool | None = None
     prior_nl_residency: bool | None = None
     languages: str | None = None
-
-
-class NotificationSettings(BaseModel):
-    daily_news_email_enabled: bool
+    daily_news_email_enabled: bool | None = None
+    ind_diff_email_enabled: bool | None = None
 
 
 class ProjectSettings(BaseModel):

@@ -4,8 +4,8 @@ Uses a hardcoded relevance map (same as test_ind_notify.py) so no scraping or LL
 calls are needed. Run this after setting your profile attributes in the app.
 
 From repo root:
-    uv run --package data-pipeline python3 data_pipeline/diff_detector/send_test_email.py
-    uv run --package data-pipeline python3 data_pipeline/diff_detector/send_test_email.py --dry-run
+    uv run --project data_pipeline python3 data_pipeline/diff_detector/send_test_email.py
+    uv run --project data_pipeline python3 data_pipeline/diff_detector/send_test_email.py --dry-run
 """
 
 from __future__ import annotations

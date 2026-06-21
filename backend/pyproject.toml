@@ -15,5 +15,7 @@ dependencies = [
     "langchain-openai>=0.3",
     "langsmith>=0.3",
     "langchain-tavily",
-    "pytest>=8.0",
 ]
+
+[dependency-groups]
+dev = ["pytest>=8.0"]

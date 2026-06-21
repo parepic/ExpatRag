@@ -3,9 +3,12 @@
 All tests use a hand-crafted relevance map — no LLM calls needed.
 
 To visually inspect the rendered email output, run:
-    uv run --package data-pipeline pytest data_pipeline/tests/test_ind_notify.py -v -s -k preview
+    uv run --project data_pipeline pytest data_pipeline/tests/test_ind_notify.py -v -s -k preview
 """
 
+from unittest.mock import MagicMock
+
+from diff_detector.notify import load_all_users
 from diff_detector.email_renderer import get_user_bullets, render_ind_diff_email
 
 BULLET_A = "The RVO point threshold for sponsors increased from 50 to 65."
@@ -75,6 +78,29 @@ STUDENT_USER = {
     "age_bracket_under_30": True,
     "prior_nl_residency": False,
 }
+
+
+def test_load_all_users_only_queries_opted_in_recipients():
+    query = MagicMock()
+    query.select.return_value = query
+    query.eq.return_value = query
+    query.order.return_value = query
+    query.range.return_value = query
+    query.execute.return_value.data = [
+        {
+            "id": "user-1",
+            "email": "reader@example.com",
+            "ind_diff_email_enabled": True,
+        }
+    ]
+    client = MagicMock()
+    client.table.return_value = query
+
+    users = load_all_users(client)
+
+    client.table.assert_called_once_with("users")
+    query.eq.assert_called_once_with("ind_diff_email_enabled", True)
+    assert [user.email for user in users] == ["reader@example.com"]
 
 
 class TestGetUserBullets:
@@ -155,7 +181,7 @@ class TestEmailPreview:
     """Not real assertions — just print the rendered output for visual inspection.
 
     Run with:
-        uv run --package data-pipeline pytest data_pipeline/tests/test_ind_notify.py -v -s -k preview
+        uv run --project data_pipeline pytest data_pipeline/tests/test_ind_notify.py -v -s -k preview
     """
 
     def test_preview_hsm_user(self):

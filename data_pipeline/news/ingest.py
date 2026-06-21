@@ -2,8 +2,8 @@
 
 From repo root:
 
-    uv run --package data-pipeline python3 data_pipeline/news/ingest.py
-    uv run --package data-pipeline python3 data_pipeline/news/ingest.py --date 2026-05-14
+    uv run --project data_pipeline python3 data_pipeline/news/ingest.py
+    uv run --project data_pipeline python3 data_pipeline/news/ingest.py --date 2026-05-14
 """
 
 from __future__ import annotations

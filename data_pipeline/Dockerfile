@@ -12,12 +12,10 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends libmagic1 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY pyproject.toml uv.lock ./
-COPY backend/pyproject.toml backend/pyproject.toml
-COPY data_pipeline/pyproject.toml data_pipeline/pyproject.toml
+COPY pyproject.toml uv.lock data_pipeline/
 
-RUN uv sync --frozen --package data-pipeline
+RUN uv sync --project data_pipeline --frozen --no-dev
 
-COPY data_pipeline data_pipeline
+COPY . data_pipeline
 
-CMD ["python3", "data_pipeline/scrape/pipeline.py"]
+CMD ["python3", "data_pipeline/scheduled_notifications.py"]

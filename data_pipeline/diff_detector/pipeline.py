@@ -3,9 +3,9 @@
 Runs the full chain: scrape → diff → summarise → classify → notify → update corpus.
 
 From repo root:
-    uv run --package data-pipeline python3 data_pipeline/diff_detector/pipeline.py
-    uv run --package data-pipeline python3 data_pipeline/diff_detector/pipeline.py --limit 10
-    uv run --package data-pipeline python3 data_pipeline/diff_detector/pipeline.py --dry-run
+    uv run --project data_pipeline python3 data_pipeline/diff_detector/pipeline.py
+    uv run --project data_pipeline python3 data_pipeline/diff_detector/pipeline.py --limit 10
+    uv run --project data_pipeline python3 data_pipeline/diff_detector/pipeline.py --dry-run
 """
 
 from __future__ import annotations
@@ -53,16 +53,16 @@ def run_ind_diff_pipeline(
       3. Summarise each changed page with an LLM.
       4. Classify summaries into a relevance map (which user segments care about what).
       5. Query opted-in users and send personalised notification emails.
-      6. TODO: upsert changed/added pages back to the sources table and re-embed.
+      6. Refresh changed/added sources and remove deleted sources from the corpus.
     """
     client = get_supabase_client()
 
     # Step 1 — scrape
-    print("Step 1/5: Scraping IND pages...")
+    print("Step 1/6: Scraping IND pages...")
     snapshot_path = snapshot(limit=limit)
 
     # Step 2 — diff
-    print("Step 2/5: Diffing snapshot against corpus...")
+    print("Step 2/6: Diffing snapshot against corpus...")
     corpus = load_corpus(client)
     new_snapshot = load_snapshot(snapshot_path)
     diffs = run_diff(corpus, new_snapshot)
@@ -79,41 +79,47 @@ def run_ind_diff_pipeline(
         )
 
     # Step 3 — summarise
-    print(f"Step 3/5: Summarising {len(diffs)} diff(s)...")
+    print(f"Step 3/6: Summarising {len(diffs)} diff(s)...")
     summaries = summarize_page_diffs(diffs)
 
     # Step 4 — classify
-    print("Step 4/5: Classifying summaries into relevance map...")
+    print("Step 4/6: Classifying summaries into relevance map...")
     relevance_map = build_relevance_map(summaries)
 
     # Step 5 — notify
-    print("Step 5/5: Notifying opted-in users...")
+    print("Step 5/6: Notifying opted-in users...")
     stats = notify_users(relevance_map, client, dry_run=dry_run)
     print(
         f"  recipients={stats.recipients}, "
         f"sent={stats.sent}, failed={stats.failed}"
     )
 
-    # Step 6 — update corpus
-    # Commented out until the pipeline has been validated end-to-end in production.
-    # Uncomment once confident the diff/summarise/classify/notify chain is stable.
-    #
-    # print("Step 6/6: Updating corpus...")
-    # changed_urls = {d.url for d in diffs if d.change_type in ("CHANGED", "ADDED")}
-    # snapshot_records = load_snapshot_records(snapshot_path)
-    # changed_docs = [r for r in snapshot_records if r["url"] in changed_urls]
-    # store_documents(changed_docs)  # upsert changed/added pages to sources table
-    #
-    # # Re-chunk each updated source by its DB id so the RAG index stays current
-    # rows = (
-    #     client.table("sources")
-    #     .select("id, source_url")
-    #     .in_("source_url", list(changed_urls))
-    #     .execute()
-    #     .data or []
-    # )
-    # for row in rows:
-    #     chunk_sources(source_id=row["id"], override_chunks=True)
+    # Step 6 — update corpus so the same changes are not notified again tomorrow.
+    print("Step 6/6: Updating corpus...")
+    changed_urls = {d.url for d in diffs if d.change_type in ("CHANGED", "ADDED")}
+    removed_urls = {d.url for d in diffs if d.change_type == "REMOVED"}
+    snapshot_records = load_snapshot_records(snapshot_path)
+    changed_docs = [r for r in snapshot_records if r["url"] in changed_urls]
+    store_documents(changed_docs)
+
+    # Re-chunk each updated source by its DB id so the RAG index stays current.
+    rows = []
+    if changed_urls:
+        rows = (
+            client.table("sources")
+            .select("id, source_url")
+            .in_("source_url", list(changed_urls))
+            .execute()
+            .data or []
+        )
+    for row in rows:
+        chunk_sources(source_id=row["id"], override_chunks=True)
+
+    if removed_urls:
+        client.table("sources").delete().in_(
+            "source_url", list(removed_urls)
+        ).execute()
+        print(f"  Removed {len(removed_urls)} deleted source(s)")
 
     return INDDiffPipelineResult(
         snapshot_path=snapshot_path,

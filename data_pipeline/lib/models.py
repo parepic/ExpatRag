@@ -23,3 +23,4 @@ class User(BaseModel):
     prior_nl_residency: bool | None = None
     languages: str | None = None
     daily_news_email_enabled: bool = False
+    ind_diff_email_enabled: bool = False

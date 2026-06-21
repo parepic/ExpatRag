@@ -3,47 +3,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.core.logging import get_logger
 from app.core.supabase_client import supabase
 from app.dependencies.auth import get_current_user
-from app.schemas.user import NotificationSettings, ProjectSettings, UpdateUserRequest
+from app.schemas.user import ProjectSettings, UpdateUserRequest
 
 router = APIRouter(prefix="/users")
 logger = get_logger(__name__)
-
-
-@router.get("/notifications", response_model=NotificationSettings)
-def get_notification_settings(
-    user: dict = Depends(get_current_user),
-):
-    result = (
-        supabase.table("users")
-        .select("daily_news_email_enabled")
-        .eq("id", user["id"])
-        .limit(1)
-        .execute()
-    )
-    if not result.data:
-        raise HTTPException(status_code=404, detail="User not found")
-    return result.data[0]
-
-
-@router.patch("/notifications", response_model=NotificationSettings)
-def update_notification_settings(
-    body: NotificationSettings,
-    user: dict = Depends(get_current_user),
-):
-    result = (
-        supabase.table("users")
-        .update(body.model_dump())
-        .eq("id", user["id"])
-        .execute()
-    )
-    if not result.data:
-        raise HTTPException(status_code=404, detail="User not found")
-    logger.info(
-        "notification_settings_updated",
-        user_id=user["id"],
-        daily_news_email_enabled=body.daily_news_email_enabled,
-    )
-    return result.data[0]
 
 
 @router.patch("/me")
@@ -112,4 +75,3 @@ def get_retrieval_settings(
     settings = data[0]
     logger.info("project_settings_fetched", user_id=user["id"])
     return settings
-

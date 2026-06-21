@@ -10,7 +10,7 @@ Results are posted to the LangSmith project configured in the environment,
 under a persistent named dataset so experiments can be compared over time.
 
 Run with:
-    uv run --package backend pytest backend/tests/test_rag_eval.py -v -s
+    uv run --project backend pytest backend/tests/test_rag_eval.py -v -s
 """
 
 from __future__ import annotations

@@ -16,7 +16,7 @@ from lib.supabase_client import get_supabase_client
 _USER_COLUMNS = (
     "id, email, nationality, purpose_of_stay, employment_status, "
     "registration_status, has_fiscal_partner, salary_band, "
-    "age_bracket_under_30, prior_nl_residency"
+    "age_bracket_under_30, prior_nl_residency, ind_diff_email_enabled"
 )
 
 
@@ -28,7 +28,7 @@ class NotifyStats:
 
 
 def load_all_users(client: Any) -> list[User]:
-    """Load all users who have an email address, paginated."""
+    """Load users opted into IND diff emails, paginated."""
     users: list[User] = []
     page_size = 200
     offset = 0
@@ -37,6 +37,7 @@ def load_all_users(client: Any) -> list[User]:
         rows = (
             client.table("users")
             .select(_USER_COLUMNS)
+            .eq("ind_diff_email_enabled", True)
             .order("created_at")
             .range(offset, offset + page_size - 1)
             .execute()
