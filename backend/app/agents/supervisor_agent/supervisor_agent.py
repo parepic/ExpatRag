@@ -32,6 +32,7 @@ import importlib
 import os
 
 from langchain.agents import create_agent
+# from langchain.agents.middleware import SummarizationMiddleware
 from langchain.tools import tool
 from langchain_core.tools.base import InjectedToolCallId
 from langchain_core.messages import ToolMessage, AIMessage, HumanMessage
@@ -39,9 +40,20 @@ from langgraph.graph import MessagesState, StateGraph, START, END
 from langgraph.types import Command
 from pydantic import BaseModel, Field
 
-from app.core.config import LLM_MODEL
+from app.core.config import LLM_MODEL, SUMMARIZATION_TRIGGER_TOKENS, SUMMARIZATION_KEEP_MESSAGES
 from app.core.logging import get_logger
-from app.services.rag_service import retrieve_rag_context_for_agent, _get_llm
+from app.services.rag_service import (
+    retrieve_rag_context_for_agent,
+    generate_grounded_answer,
+    filter_citations_by_used_refs,
+    get_domain_context,
+    _get_llm,
+    _build_chat_history,
+    _format_profile_section,
+    _load_user_profile,
+    _format_user_profile,
+    _load_project_settings,
+)
 
 
 logger = get_logger(__name__)
@@ -114,65 +126,34 @@ def check_input_guardrails(user_message: str) -> InputGuardrailCheck:
 # PROMPTS
 # =============================================================================
 
-def format_chat_history(chat_history: List[Dict[str, str]]) -> str:
+def get_supervisor_system_prompt(
+    domain_context: Optional[str] = None,
+    user_profile_text: Optional[str] = None,
+) -> str:
     """
-    Format chat history into a readable string for the system prompt.
-    
-    Args:
-        chat_history: List of message dictionaries with 'role' and 'content' keys
-        
-    Returns:
-        Formatted string representation of the chat history
-        
-    Example:
-        >>> history = [
-        ...     {"role": "user", "content": "What is attention?"},
-        ...     {"role": "assistant", "content": "Attention is a mechanism..."}
-        ... ]
-        >>> formatted = format_chat_history(history)
-        >>> print(formatted)
-        User Message: What is attention?
-        AI Message: Attention is a mechanism...
-    """
-    if not chat_history:
-        return ""
-    
-    formatted_messages = []
-    for msg in chat_history:
-        role = msg.get("role", "unknown")
-        content = msg.get("content", "")
-        # Format: "User Message: message" or "AI Message: message"
-        role_label = "User Message" if role.lower() == "user" else "AI Message"
-        formatted_messages.append(f"{role_label}: {content}")
-    
-    return "\n\n".join(formatted_messages)
+    Get the system prompt for the supervisor agent.
 
+    Conversation history is supplied at invoke time as prior messages, not via the
+    system prompt, so it is not handled here.
 
-def get_supervisor_system_prompt(chat_history: Optional[List[Dict[str, str]]] = None) -> str:
-    """
-    Get the system prompt for the supervisor agent, optionally including chat history.
-    
     Args:
-        chat_history: Optional list of previous messages with 'role' and 'content' keys.
-                      If provided, the chat history will be included in the system prompt.
-        
+        domain_context: Optional description of what the knowledge base covers. When provided,
+                        it is added so the supervisor can route and phrase sub-queries with the
+                        correct domain in mind.
+        user_profile_text: Optional formatted user profile. When provided, it is added so the
+                           supervisor can personalize routing and sub-queries.
+
     Returns:
-        The system prompt string, with chat history appended if provided
-        
-    Example:
-        >>> # Without history
-        >>> prompt = get_supervisor_system_prompt()
-        
-        >>> # With history
-        >>> history = [{"role": "user", "content": "What is X?"}]
-        >>> prompt = get_supervisor_system_prompt(chat_history=history)
+        The system prompt string, with domain context and user profile appended when provided
     """
     current_date = datetime.now().strftime("%B %d, %Y")
-    
+
+    domain_section = f"\n### Knowledge Base Domain\n{domain_context}\n" if domain_context else ""
+
     base_prompt = f"""You are an intelligent supervisor assistant that coordinates between two specialized agents:
 
 **Current Date: {current_date}**
-
+{domain_section}
 ### Available Agents
 
 1. **Project Documents Agent** (rag_search):
@@ -215,15 +196,9 @@ def get_supervisor_system_prompt(chat_history: Optional[List[Dict[str, str]]] = 
 
 For all other queries, you MUST route to the appropriate agent(s) and synthesize their responses. Your role is coordination and synthesis, not direct knowledge provision.
 """
-    
-    if chat_history:
-        formatted_history = format_chat_history(chat_history)
-        if formatted_history:
-            base_prompt += "\n\n### Previous Conversation Context\n"
-            base_prompt += "The following is the recent conversation history for context:\n\n"
-            base_prompt += formatted_history
-            base_prompt += "\n\nUse this conversation history to understand context and references in the current question."
-    
+
+    base_prompt += _format_profile_section(user_profile_text)
+
     return base_prompt
 
 
@@ -279,25 +254,22 @@ def create_rag_tool(project_id: str):
                     }
                 )
 
-            prompt = (
-                "Use the retrieved context to answer the user question. "
-                "Stay grounded in the provided information.\n\n"
-                f"User profile:\n{user_profile_text}\n\n"
-                f"Context:\n{context}\n\n"
-                f"Question:\n{query}"
+            rag_answer = generate_grounded_answer(
+                question=query,
+                context=context,
+                user_profile_text=user_profile_text,
             )
+            used_citations = filter_citations_by_used_refs(citations, rag_answer.used_chunk_refs)
 
-            response = _get_llm().invoke([HumanMessage(content=prompt)]).content
-            
             return Command(
                 update={
                     "messages": [
                         ToolMessage(
-                            content=response,
+                            content=rag_answer.answer,
                             tool_call_id=tool_call_id
                         )
                     ],
-                    "citations": citations
+                    "citations": used_citations
                 }
             )
             
@@ -316,36 +288,49 @@ def create_rag_tool(project_id: str):
     return rag_search
 
 
-def create_rag_agent(project_id: str, model: str = "gpt-4o-mini"):
+def create_rag_agent(
+    project_id: str,
+    model: str = "gpt-4o-mini",
+    domain_context: Optional[str] = None,
+    user_profile_text: Optional[str] = None,
+):
     """
     Create a RAG agent for searching project-specific documents.
-    
+
     This agent is specialized for searching through internal project documents
     using RAG (Retrieval-Augmented Generation). It will be used as a sub-agent
     by the supervisor.
-    
+
     Args:
         project_id: The UUID of the project whose documents should be searchable
         model: The OpenAI model to use (default: "gpt-4o-mini")
-        
+        domain_context: Optional description of what the knowledge base covers. Helps the agent
+                        phrase sharper `rag_search` queries.
+        user_profile_text: Optional formatted user profile. Helps the agent target retrieval to
+                           the user's situation (e.g. nationality, residency status).
+
     Returns:
         A configured LangGraph agent for RAG search
     """
     tools = [create_rag_tool(project_id)]
-    
-    system_prompt = """You are a helpful AI assistant with access to a RAG (Retrieval-Augmented Generation) tool that searches project-specific documents.
 
+    domain_section = f"\n### Knowledge Base Domain\n{domain_context}\n" if domain_context else ""
+
+    system_prompt = f"""You are a helpful AI assistant with access to a RAG (Retrieval-Augmented Generation) tool that searches project-specific documents.
+{domain_section}
 For every user question:
 
-1. Do not assume any question is purely conceptual or general.  
-2. Use the `rag_search` tool immediately with a clear and relevant query derived from the user's question.  
-3. Carefully review the retrieved documents and base your entire answer on the RAG results.  
-4. If the retrieved information fully answers the user's question, respond clearly and completely using that information.  
-5. If the retrieved information is insufficient or incomplete, explicitly state that and provide helpful suggestions or guidance based on what you found.  
+1. Do not assume any question is purely conceptual or general.
+2. Use the `rag_search` tool immediately with a clear and relevant query derived from the user's question. Use the knowledge base domain and the user profile (when available) to add precise terms to the query.
+3. Carefully review the retrieved documents and base your entire answer on the RAG results.
+4. If the retrieved information fully answers the user's question, respond clearly and completely using that information.
+5. If the retrieved information is insufficient or incomplete, explicitly state that and provide helpful suggestions or guidance based on what you found.
 6. Always present answers in a clear, well-structured, and conversational manner.
 
 **Never answer without first querying the RAG tool. This ensures every response is grounded in project-specific context and documentation.**"""
-    
+
+    system_prompt += _format_profile_section(user_profile_text)
+
     agent = create_agent(
         model=model,
         tools=tools,
@@ -360,17 +345,23 @@ For every user question:
 # WEB SEARCH AGENT
 # =============================================================================
 
-def create_web_search_agent(model: str = "gpt-4o-mini", use_tavily: bool = True):
+def create_web_search_agent(
+    model: str = "gpt-4o-mini",
+    use_tavily: bool = True,
+    domain_context: Optional[str] = None,
+):
     """
     Create an agent with web search capabilities.
 
     This agent is specialized for searching the internet for current information.
     It uses Tavily as the web search backend.
-    
+
     Args:
         model: The OpenAI model to use (default: "gpt-4o-mini")
         use_tavily: Kept for compatibility; Tavily is the only supported backend.
-        
+        domain_context: Optional description of the typical domain. Used as a light hint to add
+                        location context to searches, without overriding the user's explicit scope.
+
     Returns:
         A configured LangGraph agent for web search
     """
@@ -384,12 +375,21 @@ def create_web_search_agent(model: str = "gpt-4o-mini", use_tavily: bool = True)
     tools = [search_tool]
 
     current_date = datetime.now().strftime("%B %d, %Y")
-    
+
+    domain_hint = ""
+    if domain_context:
+        domain_hint = (
+            f"\n**Context:** {domain_context}\n"
+            "Queries often relate to expat life in the Netherlands, so add location/NL context to "
+            "search terms when it helps — but honor the user's explicit scope if they ask about "
+            "something outside this domain.\n"
+        )
+
     system_prompt = f"""You are a specialized web search assistant.
 Your job is to search the internet for current information and provide accurate, up-to-date answers.
 
 **Current Date: {current_date}**
-
+{domain_hint}
 For every query you receive:
 1. **Reformulate vague queries into specific search terms** before searching
 2. Use the web search tool with clear, specific queries
@@ -426,47 +426,63 @@ Never fabricate information - only use what's found in search results."""
 # SUPERVISOR TOOLS (Wrapped Sub-Agents)
 # =============================================================================
 
-def create_supervisor_tools(project_id: str, model: str = "gpt-4o-mini"):
+def create_supervisor_tools(
+    project_id: str,
+    model: str = "gpt-4o-mini",
+    domain_context: Optional[str] = None,
+    user_profile_text: Optional[str] = None,
+):
     """
     Create supervisor tools that wrap the specialized agents.
-    
+
     This function creates two tools for the supervisor:
     1. rag_search: Wraps the RAG agent for project document search
     2. search_web: Wraps the web search agent for internet queries
-    
+
     The supervisor will use these tools to delegate work to specialized agents.
-    
+
     Args:
         project_id: The UUID of the project for the RAG agent
         model: The OpenAI model to use for both agents (default: "gpt-4o-mini")
-        
+        domain_context: Optional description of what the knowledge base covers. Passed to the
+                        sub-agents so they route and phrase queries with the right domain in mind.
+        user_profile_text: Optional formatted user profile. Passed to the RAG sub-agent so it can
+                           target retrieval to the user's situation.
+
     Returns:
         List of tools (rag_search and search_web) for the supervisor
     """
     # Create the specialized agents
-    rag_agent = create_rag_agent(project_id, model)
-    web_agent = create_web_search_agent(model)
-    
+    rag_agent = create_rag_agent(
+        project_id,
+        model,
+        domain_context=domain_context,
+        user_profile_text=user_profile_text,
+    )
+    web_agent = create_web_search_agent(model, domain_context=domain_context)
+
     @tool
     def rag_search(
         query: str,
         tool_call_id: Annotated[str, InjectedToolCallId],
     ) -> Command:
-        """Search internal project documents using RAG.
-        
-        Use this when the user asks about:
-        - Project-specific information
-        - Internal documentation
-        - Previously uploaded files and documents
-        - Company/project-specific data
-        - Technical specifications from project files
-        
+        """Search the project's expat knowledge base for the Netherlands (RAG).
+
+        This is the default tool — prefer it for any substantive question. Use it for questions
+        about living, working, or relocating to the Netherlands, including:
+        - Immigration, visas, and residence permits (IND)
+        - Income tax, the 30% ruling, and BSN
+        - Municipal registration (gemeente) and address registration
+        - Housing and rental rules
+        - Health insurance, healthcare, and banking
+        - Employment, and any topic likely covered by the user's uploaded documents
+
         Args:
-            query: Natural language query about project documents
+            query: Natural language query about the knowledge base
             tool_call_id: Injected tool call ID for message tracking
-            
+
         Returns:
-            Command with relevant information from project documents and citations
+            Command with relevant information from the knowledge base and citations
         """
         logger.info(
             "supervisor_rag_tool_started",
@@ -504,18 +520,18 @@ def create_supervisor_tools(project_id: str, model: str = "gpt-4o-mini"):
     
     @tool
     def search_web(query: str) -> str:
-        """Search the internet for current information.
-        
-        Use this when the user asks about:
-        - Current events or recent news
-        - General knowledge not in project documents
-        - External information or public data
-        - Market trends or industry news
-        - Any information that requires up-to-date web sources
-        
+        """Search the public internet for current or external information.
+
+        Use ONLY when the user explicitly asks to search the web, or when the question needs
+        up-to-date external information that is not expected in the project knowledge base, such as:
+        - Current events, recent news, or very recent policy changes
+        - General facts clearly outside the Netherlands expat knowledge base
+        - Public data or market/industry news
+        When relevant, add Netherlands/location context to the query.
+
         Args:
             query: Natural language query for web search
-            
+
         Returns:
             Relevant information from web search results
         """
@@ -609,7 +625,6 @@ def should_continue(state: CustomAgentState) -> Literal["supervisor", "__end__"]
 def create_supervisor_agent(
     project_id: str,
     model: str = "gpt-4o-mini",
-    chat_history: Optional[List[Dict[str, str]]] = None
 ):
     """
     Create a supervisor agent with input guardrails that coordinates RAG and web search agents.
@@ -632,47 +647,53 @@ def create_supervisor_agent(
     Args:
         project_id: The UUID of the project for the RAG agent
         model: The OpenAI model to use (default: "gpt-4o-mini")
-        chat_history: Optional list of previous messages with 'role' and 'content' keys.
-                     If provided, the chat history will be included in the system prompt
-                     to provide conversation context.
-        
+
+    Note:
+        Conversation history is supplied at invoke time as prior messages (see
+        run_supervisor_agent_reply), not baked into the system prompt. A
+        SummarizationMiddleware compresses long histories to keep token cost bounded.
+
     Returns:
         A compiled supervisor agent that validates input safety and coordinates sub-agents
-        
+
     Example:
-        >>> # Basic usage without history
         >>> supervisor = create_supervisor_agent("123e4567-e89b-12d3-a456-426614174000")
         >>> result = supervisor.invoke({
         ...     "messages": [{"role": "user", "content": "What does our documentation say about X?"}]
         ... })
-        
-        >>> # With chat history
-        >>> history = [
-        ...     {"role": "user", "content": "What is attention mechanism?"},
-        ...     {"role": "assistant", "content": "Attention is a mechanism that..."}
-        ... ]
-        >>> supervisor = create_supervisor_agent(
-        ...     project_id="123e4567-e89b-12d3-a456-426614174000",
-        ...     chat_history=history
-        ... )
-        >>> result = supervisor.invoke({
-        ...     "messages": [{"role": "user", "content": "Tell me more about it"}]
-        ... })
         >>> print(result["messages"][-1].content)
         >>> print(result.get("citations", []))
     """
-    # Get the supervisor tools (wrapped agents)
-    tools = create_supervisor_tools(project_id, model)
+    # Load domain context and user profile once, then share them across all layers
+    project_settings = _load_project_settings(user_id=project_id) or {}
+    domain_context = get_domain_context(project_settings)
+    user_profile_text = _format_user_profile(_load_user_profile(project_id))
 
-    # Get the system prompt with optional chat history
-    system_prompt = get_supervisor_system_prompt(chat_history=chat_history)
-    
-    # Create the base supervisor agent
+    # Get the supervisor tools (wrapped agents)
+    tools = create_supervisor_tools(
+        project_id,
+        model,
+        domain_context=domain_context,
+        user_profile_text=user_profile_text,
+    )
+
+    system_prompt = get_supervisor_system_prompt(
+        domain_context=domain_context,
+        user_profile_text=user_profile_text,
+    )
+
     base_supervisor = create_agent(
         model=model,
         tools=tools,
         system_prompt=system_prompt,
         state_schema=CustomAgentState
+        # middleware=[
+        #     SummarizationMiddleware(
+        #         model=model,
+        #         trigger=("tokens", SUMMARIZATION_TRIGGER_TOKENS),
+        #         keep=("messages", SUMMARIZATION_KEEP_MESSAGES),
+        #     )
+        # ],
     ).with_config({"recursion_limit": 10})
     
     # Build the StateGraph with guardrails
@@ -693,7 +714,7 @@ def create_supervisor_agent(
         }
     )
     workflow.add_edge("supervisor", END)
-    
+
     # Compile and return
     return workflow.compile()
 
@@ -705,13 +726,14 @@ def run_supervisor_agent_reply(
     model: str = LLM_MODEL,
 ) -> tuple[str, list[dict]]:
     """Invoke the supervisor agent and return (answer, citations)."""
-    agent = create_supervisor_agent(
-        project_id=user_id,
-        model=model,
-        chat_history=chat_history,
-    )
+    agent = create_supervisor_agent(project_id=user_id, model=model)
 
-    result = agent.invoke({"messages": [HumanMessage(content=question)]})
+    # Feed prior turns as messages (not via the system prompt) so the summarization
+    # middleware can bound them; the current question is the final message.
+    history_messages = _build_chat_history(chat_history or [])
+    result = agent.invoke(
+        {"messages": [*history_messages, HumanMessage(content=question)]}
+    )
     messages = result.get("messages", [])
     reply_text = ""
     for msg in reversed(messages):

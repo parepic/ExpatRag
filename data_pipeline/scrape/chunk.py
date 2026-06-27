@@ -28,6 +28,7 @@ from lib.config import (
     CHUNK_OVERRIDE_CHUNKS,
     CHUNK_SIZE,
 )
+
 from lib.supabase_client import get_supabase_client
 from scrape.embeddings import get_embeddings
 

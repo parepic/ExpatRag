@@ -125,7 +125,6 @@ def add_chat_message(user_id: str, chat_id: str, message: str) -> dict:
 
     chat_history = _load_chat_history(chat_id)
     prior_messages = chat_history[:-1] if chat_history else []
-    print("blyaaa ", chat_history)
     project_settings = _load_project_settings(user_id)
     reply_text, citations = generate_rag_reply(
         user_id=user_id,
