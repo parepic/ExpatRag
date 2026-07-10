@@ -9,6 +9,7 @@ x-python-env: &python-env
     - .env
   environment:
     FRONTEND_URL: http://localhost:3000
+    SUPABASE_API_URL: http://host.docker.internal:54321
     LOG_FILE: /app/logs/application.log
     SESSION_COOKIE_SECURE: "false"
 
@@ -16,8 +17,8 @@ x-pipeline-service: &pipeline-service
   <<: [*host-supabase, *python-env]
   image: expatrag-data-pipeline
   build:
-    context: .
-    dockerfile: data_pipeline/Dockerfile
+    context: ./data_pipeline
+    dockerfile: Dockerfile
   profiles:
     - pipeline
   volumes:
@@ -27,8 +28,8 @@ services:
   backend:
     <<: [*host-supabase, *python-env]
     build:
-      context: .
-      dockerfile: backend/Dockerfile
+      context: ./backend
+      dockerfile: Dockerfile
     ports:
       - "8000:8000"
     volumes:
@@ -37,8 +38,8 @@ services:
 
   frontend:
     build:
-      context: .
-      dockerfile: frontend/Dockerfile
+      context: ./frontend
+      dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_BACKEND_URL: http://localhost:8000
     environment:
@@ -76,9 +77,13 @@ services:
     <<: *pipeline-service
     command: ["python3", "data_pipeline/news/notify.py"]
 
-  daily-news:
+  weekly-news:
     <<: *pipeline-service
-    command: ["python3", "data_pipeline/news/daily.py"]
+    command: ["python3", "data_pipeline/news/weekly.py"]
+
+  scheduled-notifications:
+    <<: *pipeline-service
+    command: ["python3", "data_pipeline/scheduled_notifications.py"]
 
   ind-diff-notify:
     <<: *pipeline-service

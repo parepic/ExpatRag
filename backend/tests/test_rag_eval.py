@@ -10,12 +10,13 @@ Results are posted to the LangSmith project configured in the environment,
 under a persistent named dataset so experiments can be compared over time.
 
 Run with:
-    uv run --package backend pytest backend/tests/test_rag_eval.py -v -s
+    uv run --project backend pytest backend/tests/test_rag_eval.py -v -s
 """
 
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 from langsmith import Client
@@ -26,18 +27,69 @@ from pydantic import BaseModel
 from app.services.rag_service import (
     _build_context,
     _format_user_profile,
-    _get_llm,
     _get_retrieval_function,
-    RAGAnswer,
+    generate_grounded_answer,
 )
-from app.core.config import SEARCH_STRATEGY
-from app.core.prompts import RAG_PROMPT
+from app.core.config import EMBEDDING_MODEL, LLM_MODEL, SEARCH_STRATEGY
 
 GOLDEN_DATASET_PATH = Path(__file__).parent / "test_set" / "golden_dataset.json"
 DATASET_NAME = "expatrag-golden-v1"
 
 CORRECTNESS_THRESHOLD = 0.7
 RELEVANCE_THRESHOLD = 0.7
+
+
+# ---------------------------------------------------------------------------
+# Configuration under test
+# ---------------------------------------------------------------------------
+# Every knob that defines this run's configuration is captured here, then both
+# (a) used by the pipeline below and (b) recorded as experiment metadata, so runs
+# can be grouped and compared by any of these keys in the LangSmith UI. Sweep
+# settings without editing code by overriding via env, e.g.:
+#   EVAL_CHUNKS_PER_SEARCH=8 EVAL_SIMILARITY_THRESHOLD=0.3 uv run ... pytest ...
+AGENT_TYPE = os.getenv("EVAL_AGENT_TYPE", "direct")
+CHUNKS_PER_SEARCH = int(os.getenv("EVAL_CHUNKS_PER_SEARCH", "5"))
+SIMILARITY_THRESHOLD = float(os.getenv("EVAL_SIMILARITY_THRESHOLD", "0.0"))
+VECTOR_WEIGHT = float(os.getenv("EVAL_VECTOR_WEIGHT", "0.5"))
+KEYWORD_WEIGHT = float(os.getenv("EVAL_KEYWORD_WEIGHT", "0.5"))
+NUMBER_OF_QUERIES = int(os.getenv("EVAL_NUMBER_OF_QUERIES", "3"))
+
+# Full configuration recorded on every experiment. Flat scalar keys only, so each
+# is groupable / chartable as an x-axis in LangSmith.
+EXPERIMENT_CONFIG = {
+    "search_strategy": SEARCH_STRATEGY,
+    "embedding_model": EMBEDDING_MODEL,
+    "llm_model": LLM_MODEL,
+    "agent_type": AGENT_TYPE,
+    "chunks_per_search": CHUNKS_PER_SEARCH,
+    "similarity_threshold": SIMILARITY_THRESHOLD,
+    "vector_weight": VECTOR_WEIGHT,
+    "keyword_weight": KEYWORD_WEIGHT,
+    "number_of_queries": NUMBER_OF_QUERIES,
+}
+
+# Short human-readable label for clean chart x-axes when comparing runs.
+CONFIG_LABEL = f"{SEARCH_STRATEGY}|{LLM_MODEL}|k={CHUNKS_PER_SEARCH}|t={SIMILARITY_THRESHOLD}"
+
+
+def _retrieval_kwargs() -> dict:
+    """Build retrieval params for the configured strategy.
+
+    Mirrors retrieve_rag_context_for_agent: only pass weights for hybrid strategies
+    and number_of_queries for multi-query strategies, so each retrieval function
+    receives exactly the kwargs it accepts.
+    """
+    kwargs: dict = {
+        "match_count": CHUNKS_PER_SEARCH,
+        "match_threshold": SIMILARITY_THRESHOLD,
+    }
+    strategy = SEARCH_STRATEGY.strip().lower()
+    if "hybrid" in strategy:
+        kwargs["vector_weight"] = VECTOR_WEIGHT
+        kwargs["keyword_weight"] = KEYWORD_WEIGHT
+    if "multi query" in strategy:
+        kwargs["number_of_queries"] = NUMBER_OF_QUERIES
+    return kwargs
 
 
 # ---------------------------------------------------------------------------
@@ -92,22 +144,17 @@ def _rag_target(inputs: dict) -> dict:
     user_info: dict = inputs["user_info"]
 
     retrieval_fn = _get_retrieval_function(SEARCH_STRATEGY)
-    chunks = retrieval_fn(question)
+    chunks = retrieval_fn(question, **_retrieval_kwargs())
     context = _build_context(chunks)
     user_profile_text = _format_user_profile(user_info)
-    candidate_refs = list(range(1, len(chunks) + 1))
 
-    chain = RAG_PROMPT | _get_llm().with_structured_output(RAGAnswer)
-    response: RAGAnswer = chain.invoke(
-        {
-            "context": context,
-            "question": question,
-            "chat_history": [],
-            "user_profile": user_profile_text,
-            "candidate_chunk_refs": (
-                ", ".join(str(r) for r in candidate_refs) if candidate_refs else "none"
-            ),
-        }
+    # Use the same generation step production serves (via the simple/supervisor agents),
+    # so the eval reflects the live prompt instead of a diverging copy.
+    response = generate_grounded_answer(
+        question=question,
+        context=context,
+        user_profile_text=user_profile_text,
+        chat_history=[],
     )
     return {
         "answer": response.answer.strip(),
@@ -256,10 +303,11 @@ def test_rag_evaluation():
         _rag_target,
         data=DATASET_NAME,
         evaluators=[answer_correctness, retrieval_relevance],
-        experiment_prefix="expatrag-eval",
+        experiment_prefix=f"expatrag-{SEARCH_STRATEGY.replace(' ', '-')}",
         metadata={
             "dataset": DATASET_NAME,
-            "search_strategy": SEARCH_STRATEGY,
+            "config_label": CONFIG_LABEL,
+            **EXPERIMENT_CONFIG,
         },
     )
 

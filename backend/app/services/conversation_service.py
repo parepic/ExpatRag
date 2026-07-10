@@ -125,13 +125,12 @@ def add_chat_message(user_id: str, chat_id: str, message: str) -> dict:
 
     chat_history = _load_chat_history(chat_id)
     prior_messages = chat_history[:-1] if chat_history else []
-
     project_settings = _load_project_settings(user_id)
     reply_text, citations = generate_rag_reply(
         user_id=user_id,
         question=message,
         agent_type=project_settings.get("agent_type"),
-        chat_history=[],
+        chat_history=chat_history,
     )
 
     logger.info("rag_reply_generated", user_id=user_id, chat_id=chat_id, citation_count=len(citations))

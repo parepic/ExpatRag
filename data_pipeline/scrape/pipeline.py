@@ -3,9 +3,9 @@ Data pipeline — scrape/store pages, chunk/embed them, then fetch/classify/stor
 
 From repo root:
 
-    uv run --package data-pipeline python3 data_pipeline/scrape/pipeline.py
-    uv run --package data-pipeline python3 data_pipeline/scrape/pipeline.py --skip-data-fetch
-    uv run --package data-pipeline python3 data_pipeline/scrape/pipeline.py --skip-chunk
+    uv run --project data_pipeline python3 data_pipeline/scrape/pipeline.py
+    uv run --project data_pipeline python3 data_pipeline/scrape/pipeline.py --skip-data-fetch
+    uv run --project data_pipeline python3 data_pipeline/scrape/pipeline.py --skip-chunk
 """
 
 import argparse

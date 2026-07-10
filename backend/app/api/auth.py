@@ -27,37 +27,37 @@ def register(body: RegisterRequest):
         .eq("email", body.email)
         .execute()
     )
-    print("sukkka")
     if existing.data:
         logger.warning("account_already_exists", email=body.email)
         raise HTTPException(status_code=409, detail="An account already exists with this email.")
 
     password_hash = bcrypt.hashpw(body.password.encode(), bcrypt.gensalt()).decode()
-    print("sukkka0.5")
 
     result = (
         supabase.table("users")
         .insert({"email": body.email, "password": password_hash})
         .execute()
     )
-    print("sukkka1")
 
     user = result.data[0]
-    
 
     logger.info("creating_default_project_settings", email=body.email)
-    project_result = supabase.table('project_settings').insert({
-        "user_id": user["id"], # get the uuid of the newly created user
-        "rag_strategy": "vector",
-        "agent_type": "simple",
-        "chunks_per_search": 5,
-        "final_context_size": 5,
-        "similarity_threshold": 0.3,
-        "number_of_queries": 3,
-        "reranking_enabled": True,
-        "vector_weight": 0.7,
-        "keyword_weight": 0.3,
-    }).execute()
+    project_result = (
+        supabase.table("project_settings")
+        .insert({
+            "user_id": user["id"],
+            "rag_strategy": "vector search",
+            "agent_type": "simple",
+            "chunks_per_search": 5,
+            "final_context_size": 5,
+            "similarity_threshold": 0.5,
+            "number_of_queries": 3,
+            "reranking_enabled": True,
+            "vector_weight": 0.5,
+            "keyword_weight": 0.5,
+        })
+        .execute()
+    )
     if not project_result.data:
         logger.error("project_settings_creation_failed", reason="no_data_returned")
         # Rollback

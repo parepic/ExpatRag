@@ -1,4 +1,4 @@
-"""Run the three-stage MVP daily news pipeline."""
+"""Run the three-stage weekly news pipeline."""
 
 from __future__ import annotations
 
@@ -16,20 +16,20 @@ from news.store import StoreNewsResult, store_news_from_jsonl
 
 
 @dataclass(slots=True)
-class DailyNewsResult:
+class WeeklyNewsResult:
     fetched: int
     store: StoreNewsResult
     notifications: NotificationStats
 
 
-def run_daily_news() -> DailyNewsResult:
-    """Fetch 48 hours, store unseen alerts, then notify using inserted rows."""
-    fetched_items = ingest_iamexpat_news(lookback_hours=48)
+def run_weekly_news() -> WeeklyNewsResult:
+    """Fetch the previous 7 days, store unseen alerts, then notify subscribers."""
+    fetched_items = ingest_iamexpat_news(lookback_hours=24 * 7)
     store_result = store_news_from_jsonl()
     notification_stats = send_news_digest_to_subscribers(
         store_result.inserted_rows
     )
-    return DailyNewsResult(
+    return WeeklyNewsResult(
         fetched=len(fetched_items),
         store=store_result,
         notifications=notification_stats,
@@ -37,9 +37,9 @@ def run_daily_news() -> DailyNewsResult:
 
 
 def main() -> None:
-    result = run_daily_news()
+    result = run_weekly_news()
     print(
-        "Daily news complete: "
+        "Weekly news complete: "
         f"fetched={result.fetched}, loaded={result.store.loaded}, "
         f"unseen={result.store.unseen}, selected={result.store.selected}, "
         f"inserted={result.store.inserted}, "

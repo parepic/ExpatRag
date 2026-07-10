@@ -39,7 +39,7 @@ const SEARCH_STRATEGY_INFO: Record<string, string> = {
 
 const DEFAULT_SETTINGS: ProjectSettings = {
   rag_strategy: "vector search",
-  agent_type: "simple",
+  agent_type: "supervisor",
   chunks_per_search: 5,
   final_context_size: 5,
   similarity_threshold: 0.5,

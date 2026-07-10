@@ -6,7 +6,7 @@ Uses the sponsor recognition page diff (50→65 points, 4→3 year penalty windo
 which is clearly relevant to HSM-related users and not to students.
 
 Run with:
-    uv run --package data-pipeline pytest -m integration data_pipeline/tests/test_ind_classify_integration.py -v -s
+    uv run --project data_pipeline pytest -m integration data_pipeline/tests/test_ind_classify_integration.py -v -s
 """
 import json
 from pathlib import Path

@@ -44,7 +44,6 @@ def send_news_digest(
     html: str,
 ) -> str | None:
     """Send one digest without exposing any other subscriber addresses."""
-    validate_email_configuration()
     params: resend.Emails.SendParams = {
         "from": get_email_sender_address(),
         "to": [recipient],
@@ -88,11 +87,11 @@ def render_digest(
 ) -> tuple[str, str, str]:
     digest_date = (digest_date or datetime.now(UTC)).astimezone(UTC)
     date_label = digest_date.strftime("%d %B %Y")
-    subject = f"Your ExpatRag daily news digest - {date_label}"
-    plain_parts = [f"ExpatRag daily news digest - {date_label}", ""]
+    subject = f"Your ExpatRag weekly news digest - {date_label}"
+    plain_parts = [f"ExpatRag weekly news digest - {date_label}", ""]
     html_parts = [
         "<html><body>",
-        f"<h1>ExpatRag daily news digest - {html_lib.escape(date_label)}</h1>",
+        f"<h1>ExpatRag weekly news digest - {html_lib.escape(date_label)}</h1>",
     ]
 
     for item in items:
@@ -159,7 +158,7 @@ def send_news_digest_to_subscribers(
     recipients = load_subscribed_users(client)
     stats.recipients = len(recipients)
     if not recipients:
-        print("No users are subscribed to daily news email.")
+        print("No users are subscribed to weekly news email.")
         return stats
 
     validate_email_configuration()

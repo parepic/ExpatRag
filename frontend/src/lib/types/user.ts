@@ -21,6 +21,8 @@ export type UserProfile = {
   salary_band: SalaryBand | null;
   age_bracket_under_30: boolean | null;
   prior_nl_residency: boolean | null;
+  daily_news_email_enabled: boolean;
+  ind_diff_email_enabled: boolean;
 };
 
 export type AuthUser = {

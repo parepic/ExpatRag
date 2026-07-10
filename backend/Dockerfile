@@ -8,13 +8,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-COPY pyproject.toml uv.lock ./
-COPY backend/pyproject.toml backend/pyproject.toml
-COPY data_pipeline/pyproject.toml data_pipeline/pyproject.toml
+COPY pyproject.toml uv.lock backend/
 
-RUN uv sync --frozen --package backend
+RUN uv sync --project backend --frozen --no-dev
 
-COPY backend backend
+COPY . backend
 
 EXPOSE 8000
 

@@ -1,0 +1,2 @@
+ALTER TABLE users
+ADD COLUMN ind_diff_email_enabled BOOLEAN NOT NULL DEFAULT TRUE;

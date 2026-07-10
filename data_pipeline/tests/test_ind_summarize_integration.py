@@ -6,7 +6,7 @@ two pages with concrete numeric values — the test asserts the LLM picked up
 the right numbers, not just that it returned something.
 
 Run with:
-    uv run --package data-pipeline pytest -m integration data_pipeline/tests/test_ind_summarize_integration.py -v
+    uv run --project data_pipeline pytest -m integration data_pipeline/tests/test_ind_summarize_integration.py -v
 """
 import json
 from pathlib import Path

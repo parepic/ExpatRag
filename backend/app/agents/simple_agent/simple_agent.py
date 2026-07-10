@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional
 from typing_extensions import Annotated
 
 from langchain.agents import create_agent
+# from langchain.agents.middleware import SummarizationMiddleware
 from langchain.tools import tool
 from langchain_core.messages import HumanMessage, ToolMessage
 from langchain_core.tools.base import InjectedToolCallId
@@ -41,63 +42,40 @@ BASE_SYSTEM_PROMPT = """You are ExpatRag, a helpful AI assistant.
 
 For every user question:
 
-1. Call the `rag_search` tool first.
+1. Call the `rag_search` tool first, using the knowledge base domain and the user profile (when provided) to phrase a precise search query.
 2. Ground your answer in the tool result.
 3. If information is insufficient, say so clearly.
 4. Keep responses concise and practical.
 """
 
 
-def format_chat_history(chat_history: List[Dict[str, str]]) -> str: 
-    """
-    Format chat history into a readable string for the system prompt.
-    
+def get_system_prompt(
+    domain_context: Optional[str] = None,
+    user_profile_text: Optional[str] = None,
+) -> str:
+    """Get system prompt for the simple agent.
+
+    Conversation history is supplied at invoke time as prior messages, not via the
+    system prompt, so it is not handled here.
+
     Args:
-        chat_history: List of message dictionaries with 'role' and 'content' keys
-        
-    Returns:
-        Formatted string representation of the chat history
-        
-    Example:
-        >>> history = [
-        ...     {"role": "user", "content": "What is attention?"},
-        ...     {"role": "assistant", "content": "Attention is a mechanism..."}
-        ... ]
-        >>> formatted = format_chat_history(history)
-        >>> print(formatted)
-        User: What is attention?
-        Assistant: Attention is a mechanism...
+        domain_context: Optional description of what the knowledge base covers.
+        user_profile_text: Optional formatted user profile for personalization.
     """
-    if not chat_history:
-        return ""
-    
-    formatted_messages = []
-    for msg in chat_history:
-        role = msg.get("role", "unknown")
-        content = msg.get("content", "")
-        # Format: "User Message: message" or "AI Message: message"
-        role_label = "User Message" if role.lower() == "user" else "AI Message"
-        formatted_messages.append(f"{role_label}: {content}")
-    
-    return "\n\n".join(formatted_messages)
+    # Local import keeps the established circular-import-safe pattern with rag_service.
+    from app.services.rag_service import _format_profile_section
 
-
-def get_system_prompt(chat_history: Optional[List[Dict[str, str]]] = None) -> str:
-    """Get system prompt for the simple agent."""
     prompt = BASE_SYSTEM_PROMPT
-    
-    if chat_history:
-        formatted_history = format_chat_history(chat_history)
-        if formatted_history:
-            prompt += "\n\n### Previous Conversation Context\n"
-            prompt += "The following is the recent conversation history for context:\n\n"
-            prompt += formatted_history
-            prompt += "\n\nUse this conversation history to understand context and references in the current question."
-    
-    return prompt 
+
+    if domain_context:
+        prompt += f"\n### Knowledge Base Domain\n{domain_context}\n"
+
+    prompt += _format_profile_section(user_profile_text)
+
+    return prompt
 
 
-def create_rag_tool(user_id: str, chat_history: Optional[List[Dict[str, str]]] = None):
+def create_rag_tool(user_id: str):
     """Create a tool that proxies to the existing RAG pipeline."""
 
     @tool
@@ -108,7 +86,11 @@ def create_rag_tool(user_id: str, chat_history: Optional[List[Dict[str, str]]] =
         """Retrieve grounded context and citations for the agent to synthesize an answer."""
         try:
             # Local import avoids circular import at module load time.
-            from app.services.rag_service import retrieve_rag_context_for_agent
+            from app.services.rag_service import (
+                retrieve_rag_context_for_agent,
+                generate_grounded_answer,
+                filter_citations_by_used_refs,
+            )
 
             context, citations, user_profile_text = retrieve_rag_context_for_agent(
                 user_id=user_id,
@@ -116,24 +98,35 @@ def create_rag_tool(user_id: str, chat_history: Optional[List[Dict[str, str]]] =
             )
 
             if not citations:
-                context = "No relevant context was found in the indexed documents."
+                return Command(
+                    update={
+                        "messages": [
+                            ToolMessage(
+                                content="No relevant context was found in the indexed documents.",
+                                tool_call_id=tool_call_id,
+                            )
+                        ]
+                    },
+                )
 
-            response = (
-                "Use the retrieved context below to answer the user question. "
-                "Do not invent facts beyond this context.\n\n"
-                f"User profile:\n{user_profile_text}\n\n"
-                f"Retrieved context:\n{context}"
+            # Generate a grounded answer and let the model report which chunks it actually used,
+            # so only those are surfaced as citations (not every retrieved chunk).
+            rag_answer = generate_grounded_answer(
+                question=query,
+                context=context,
+                user_profile_text=user_profile_text,
             )
+            used_citations = filter_citations_by_used_refs(citations, rag_answer.used_chunk_refs)
 
             return Command(
                 update={
                     "messages": [
                         ToolMessage(
-                            content=response,
+                            content=rag_answer.answer,
                             tool_call_id=tool_call_id,
                         )
                     ],
-                    "citations": citations,
+                    "citations": used_citations,
                 },
             )
         except Exception as e:
@@ -167,17 +160,43 @@ def pass_through_node(_: CustomAgentState) -> Dict[str, Any]:
 def create_simple_rag_agent(
     user_id: str,
     model: str = LLM_MODEL,
-    chat_history: Optional[List[Dict[str, str]]] = None,
 ):
-    """Create a simple tool-calling RAG agent for this repository."""
-    tools = [create_rag_tool(user_id=user_id, chat_history=chat_history)]
-    system_prompt = get_system_prompt(chat_history=chat_history)
+    """Create a simple tool-calling RAG agent for this repository.
+
+    Conversation history is supplied at invoke time as prior messages (see
+    run_simple_agent_reply), not baked into the system prompt. A SummarizationMiddleware
+    compresses long histories so per-request token cost stays bounded.
+    """
+    # Local import keeps the established circular-import-safe pattern with rag_service.
+    from app.services.rag_service import (
+        get_domain_context,
+        _load_project_settings,
+        _load_user_profile,
+        _format_user_profile,
+    )
+
+    project_settings = _load_project_settings(user_id=user_id) or {}
+    domain_context = get_domain_context(project_settings)
+    user_profile_text = _format_user_profile(_load_user_profile(user_id))
+
+    tools = [create_rag_tool(user_id=user_id)]
+    system_prompt = get_system_prompt(
+        domain_context=domain_context,
+        user_profile_text=user_profile_text,
+    )
 
     base_agent = create_agent(
         model=model,
         tools=tools,
         system_prompt=system_prompt,
-        state_schema=CustomAgentState,
+        state_schema=CustomAgentState
+        # middleware=[
+        #     SummarizationMiddleware(
+        #         model=model,
+        #         trigger=("tokens", SUMMARIZATION_TRIGGER_TOKENS),
+        #         keep=("messages", SUMMARIZATION_KEEP_MESSAGES),
+        #     )
+        # ],
     ).with_config({"recursion_limit": 5})
 
     workflow = StateGraph(CustomAgentState)
@@ -199,12 +218,16 @@ def run_simple_agent_reply(
     model: str = LLM_MODEL,
 ) -> tuple[str, list[dict]]:
     """Invoke the simple agent and return (answer, citations)."""
-    agent = create_simple_rag_agent(
-        user_id=user_id,
-        model=model,
-        chat_history=chat_history,
+    agent = create_simple_rag_agent(user_id=user_id, model=model)
+
+    # Feed prior turns as messages (not via the system prompt) so the summarization
+    # middleware can bound them; the current question is the final message.
+    from app.services.rag_service import _build_chat_history
+
+    history_messages = _build_chat_history(chat_history or [])
+    result = agent.invoke(
+        {"messages": [*history_messages, HumanMessage(content=question)]}
     )
-    result = agent.invoke({"messages": [HumanMessage(content=question)]})
 
     messages = result.get("messages", [])
     reply_text = ""

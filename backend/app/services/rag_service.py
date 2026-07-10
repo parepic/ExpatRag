@@ -5,15 +5,14 @@ from __future__ import annotations
 import os
 from functools import lru_cache
 from dotenv import load_dotenv
-from typing import List, Callable, Any
+from typing import List, Callable, Any, Optional, Dict
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langsmith import traceable
 from pydantic import BaseModel, Field
 
-from app.core.config import EMBEDDING_MODEL, LLM_MODEL, RAG_MATCH_COUNT, RAG_MATCH_THRESHOLD, SEARCH_STRATEGY
+from app.core.config import EMBEDDING_MODEL, LLM_MODEL, SEARCH_STRATEGY
 from app.core.logging import get_logger
-from app.core.prompts import RAG_PROMPT
 from app.core.supabase_client import supabase
 from app.services.rag_utils import reciprocal_rank_fusion
 
@@ -180,7 +179,6 @@ def _get_retrieval_function(strategy: str) -> Callable[..., list[dict]]:
     return retrieval_function
 
 
-
 @traceable(run_type="retriever", name="generate_query_variations")
 def _generate_query_variations(user_query: str, num_queries: int = 3) -> list[str]:
     """
@@ -249,6 +247,51 @@ def _format_user_profile(user_profile: dict) -> str:
         profile_lines.append(f"- {label}: {value}")
 
     return "\n".join(profile_lines) if profile_lines else "No user profile available."
+
+
+# ---------------------------------------------------------------------------
+# Shared prompt context (domain + user profile)
+# ---------------------------------------------------------------------------
+
+DEFAULT_DOMAIN_CONTEXT = (
+    "This assistant supports expats living in or relocating to the Netherlands. "
+    "The project knowledge base contains guidance on Dutch immigration and residence permits (IND), "
+    "the 30% ruling and income tax, BSN and municipal registration (gemeente), housing and rental rules, "
+    "health insurance and healthcare, banking, and employment. "
+    "Treat questions as relating to the Netherlands unless the user clearly states otherwise."
+)
+
+
+def get_domain_context(project_settings: Optional[Dict[str, Any]] = None) -> str:
+    """Return the per-project corpus description if configured, else the default domain context.
+
+    Looks for an optional ``corpus_description`` field on ``project_settings`` so the domain framing
+    can be tuned per project without code changes; falls back to :data:`DEFAULT_DOMAIN_CONTEXT`.
+
+    Args:
+        project_settings: The project settings row (may be empty/None).
+
+    Returns:
+        A short description of what the knowledge base covers.
+    """
+    if project_settings:
+        description = project_settings.get("corpus_description")
+        if description and str(description).strip():
+            return str(description).strip()
+    return DEFAULT_DOMAIN_CONTEXT
+
+
+def _format_profile_section(user_profile_text: Optional[str]) -> str:
+    """Build a system-prompt section for the user profile, or empty string if unavailable."""
+    if not user_profile_text or user_profile_text.strip() == "No user profile available.":
+        return ""
+    return (
+        "\n### Current User Profile\n"
+        "Use these details to interpret the question and to phrase the search queries you run "
+        "(for example, nationality can change which immigration or tax rules apply). "
+        "Do not repeat the profile back to the user unless they ask.\n\n"
+        f"{user_profile_text}\n"
+    )
 
 
 def _build_chat_history(history: list[dict]) -> list[HumanMessage | AIMessage]:
@@ -349,107 +392,54 @@ def retrieve_rag_context_for_agent(
     return context, citations, user_profile_text
 
 
-def _generate_rag_reply_legacy(
-    user_id: str,
+def generate_grounded_answer(
     question: str,
+    context: str,
+    user_profile_text: str,
     chat_history: list[dict] | None = None,
-) -> tuple[str, list[dict]]:
-    """Generate an LLM reply using retrieved context.
+) -> RAGAnswer:
+    """Generate a grounded answer plus the chunk refs the model actually relied on.
 
-    Parameters
-    ----------
-    user_id:
-        User ID used to load optional profile data for personalization.
-    question:
-        The user's latest message.
-    chat_history:
-        Ordered list of previous message dicts (``{"role": ..., "content": ...}``).
-        Most recent messages last.
+    The context blocks built by :func:`_build_context` are labelled with ``chunk_ref=N``.
+    Using structured output, the model returns both the ``answer`` and ``used_chunk_refs`` so
+    callers can show citations for the used chunks only (instead of every retrieved chunk).
 
-    Returns
-    -------
-    (reply_text, citations)
-        *reply_text* is the assistant's answer.
-        *citations* is a list of dicts carrying source metadata for storage in
-        the ``messages.citations`` JSONB column.
+    Args:
+        question: The user's question.
+        context: The formatted, chunk-ref-labelled context string.
+        user_profile_text: Formatted user profile (or a "no profile" sentinel).
+        chat_history: Optional prior turns to provide conversational context.
+
+    Returns:
+        A :class:`RAGAnswer` with the answer text and the chunk refs used.
     """
-
-    
-    logger.info("rag_reply_generation_started", user_id=user_id, retrieval_strategy=SEARCH_STRATEGY)
-    retrieval_function = _get_retrieval_function(SEARCH_STRATEGY)
-    chunks = retrieval_function(
-        question,
-        langsmith_extra={
-            "tags": ["expatrag", "backend", "retrieval", "supabase"],
-            "metadata": {
-                "user_id": user_id,
-                "embedding_model": EMBEDDING_MODEL,
-                "retrieval_strategy": retrieval_function,
-                "rag_match_count": RAG_MATCH_COUNT,
-                "rag_match_threshold": RAG_MATCH_THRESHOLD,
-                "question_char_count": len(question),
-            },
-        },
+    instructions = (
+        "Use the retrieved context to answer the user question. Stay grounded in the provided "
+        "information and do not invent facts beyond it. Each context block is labelled with a "
+        "chunk_ref number. In used_chunk_refs, return ONLY the chunk_ref numbers you actually "
+        "relied on to write the answer; omit any chunk you did not use.\n\n"
+        f"User profile:\n{user_profile_text}\n\n"
+        f"Context:\n{context}\n\n"
+        f"Question:\n{question}"
     )
-    logger.info("retrieval_completed", retrieved_chunk_count=len(chunks))
-    context = _build_context(chunks)
-    user_profile = _load_user_profile(user_id)
-    user_profile_text = _format_user_profile(user_profile)
-    chunk_ref_map = {index: chunk for index, chunk in enumerate(chunks, start=1)}
-    candidate_chunk_refs = list(chunk_ref_map.keys())
 
-    lc_history = _build_chat_history(chat_history or [])
+    messages: list[HumanMessage | AIMessage] = _build_chat_history(chat_history or [])
+    messages.append(HumanMessage(content=instructions))
 
-    chain = (RAG_PROMPT | _get_llm().with_structured_output(RAGAnswer)).with_config(
-        {
-            "run_name": "expatrag_rag_reply",
-            "tags": ["expatrag", "backend", "rag"],
-            "metadata": {
-                "llm_model": LLM_MODEL,
-                "embedding_model": EMBEDDING_MODEL,
-                "rag_match_count": RAG_MATCH_COUNT,
-            },
-        }
-    )
-    response: RAGAnswer = chain.invoke(
-        {
-            "context": context,
-            "question": question,
-            "chat_history": lc_history,
-            "user_profile": user_profile_text,
-            "candidate_chunk_refs": ", ".join(str(chunk_ref) for chunk_ref in candidate_chunk_refs)
-            if candidate_chunk_refs
-            else "none",
-        },
-        config={
-            "metadata": {
-                "user_id": user_id,
-                "question_char_count": len(question),
-                "retrieved_chunk_count": len(chunks),
-            }
-        },
-    )
-    reply_text = response.answer.strip()
-    valid_used_chunk_refs = [
-        chunk_ref
-        for chunk_ref in response.used_chunk_refs
-        if chunk_ref in chunk_ref_map
-    ]
+    structured_llm = _get_llm().with_structured_output(RAGAnswer)
+    return structured_llm.invoke(messages)
 
-    citations = [
-        {
-            "chunk_ref": chunk_ref,
-            "chunk_id": str(chunk_ref_map[chunk_ref].get("id", "")),
-            "source_id": str(chunk_ref_map[chunk_ref].get("source_id", "")),
-            "source_title": chunk_ref_map[chunk_ref].get("source_title"),
-            "source_url": chunk_ref_map[chunk_ref].get("source_url"),
-            "page_number": chunk_ref_map[chunk_ref].get("page_number"),
-            "similarity": chunk_ref_map[chunk_ref].get("similarity"),
-        }
-        for chunk_ref in valid_used_chunk_refs
-    ]
-    # logger.info("rag_reply_generated", used_chunk_ref_count=len(valid_used_chunk_refs), citation_count=len(citations))
-    return reply_text, citations
+
+def filter_citations_by_used_refs(
+    citations: list[dict],
+    used_chunk_refs: list[int],
+) -> list[dict]:
+    """Keep only the citations whose ``chunk_ref`` is in ``used_chunk_refs`` (order preserved).
+
+    Refs that do not match any retrieved citation (e.g. a hallucinated number) are dropped.
+    """
+    used = set(used_chunk_refs)
+    return [citation for citation in citations if citation.get("chunk_ref") in used]
 
 
 @traceable(run_type="chain", name="generate_rag_reply")
@@ -459,7 +449,7 @@ def generate_rag_reply(
     agent_type: str,
     chat_history: list[dict] | None = None,
 ) -> tuple[str, list[dict]]:
-    
+
     if agent_type == "simple":
         logger.info("rag_reply_generation_via_simple_agent", user_id=user_id)
         from app.agents.simple_agent.simple_agent import run_simple_agent_reply

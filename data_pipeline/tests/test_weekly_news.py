@@ -1,9 +1,9 @@
-from news.daily import run_daily_news
+from news.weekly import run_weekly_news
 from news.notify import NotificationStats
 from news.store import StoreNewsResult
 
 
-def test_daily_news_runs_stages_in_order_and_passes_inserted_rows(monkeypatch):
+def test_weekly_news_runs_stages_in_order_and_passes_inserted_rows(monkeypatch):
     calls: list[object] = []
     inserted_rows = [{"id": "news-1", "source_url": "https://example.com/news"}]
 
@@ -24,14 +24,14 @@ def test_daily_news_runs_stages_in_order_and_passes_inserted_rows(monkeypatch):
         calls.append(("notify", items))
         return NotificationStats(items=1, recipients=2, sent=2)
 
-    monkeypatch.setattr("news.daily.ingest_iamexpat_news", ingest)
-    monkeypatch.setattr("news.daily.store_news_from_jsonl", store)
-    monkeypatch.setattr("news.daily.send_news_digest_to_subscribers", notify)
+    monkeypatch.setattr("news.weekly.ingest_iamexpat_news", ingest)
+    monkeypatch.setattr("news.weekly.store_news_from_jsonl", store)
+    monkeypatch.setattr("news.weekly.send_news_digest_to_subscribers", notify)
 
-    result = run_daily_news()
+    result = run_weekly_news()
 
     assert calls == [
-        ("fetch", {"lookback_hours": 48}),
+        ("fetch", {"lookback_hours": 168}),
         ("store",),
         ("notify", inserted_rows),
     ]

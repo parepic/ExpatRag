@@ -13,7 +13,11 @@ SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "true").lower() in {
 
 EMBEDDING_MODEL = "text-embedding-3-small"
 LLM_MODEL = "gpt-4.1-mini"
-RAG_MATCH_COUNT = 5
-RAG_MATCH_THRESHOLD = 0.0
 
-SEARCH_STRATEGY = "basic"   # hybrid, multi-query-vector, multi-query-hybrid
+SEARCH_STRATEGY = "multi query hybrid search"   # hybrid, multi-query-vector, multi-query-hybrid
+
+# # Conversation summarization (agent middleware). When the agent's message history
+# # exceeds the trigger token budget, older messages are summarized while the most
+# # recent ones are kept verbatim, so per-request cost stays bounded as chats grow.
+# SUMMARIZATION_TRIGGER_TOKENS = 4000
+# SUMMARIZATION_KEEP_MESSAGES = 10

@@ -1,25 +1,30 @@
 # ExpatRag
 
-A RAG-powered assistant that helps expats navigate Dutch immigration, visa, and residency rules. It retrieves content from official government sources (IND.nl), answers questions in plain language, and cites the exact source for every claim.
+ExpatRag helps expats understand Dutch immigration and residency rules. It
+retrieves information from IND.nl, answers questions with citations, and sends
+personalised alerts for relevant IND and Dutch news updates.
 
-## Prerequisites
+## Architecture
 
-- [uv](https://docs.astral.sh/uv/getting-started/installation/)
-- [Node.js](https://nodejs.org/) v20+ and [pnpm](https://pnpm.io/installation)
-- [just](https://github.com/casey/just#installation)
-- [Supabase CLI](https://supabase.com/docs/guides/cli) (or `npx supabase`)
-- Docker (required by Supabase)
+| Component | Technology | Purpose |
+|---|---|---|
+| `frontend/` | Next.js | Web application |
+| `backend/` | FastAPI | Authentication, chat, and RAG API |
+| `data_pipeline/` | Python | Scraping, indexing, news, and notifications |
+| `supabase/` | Supabase/PostgreSQL | Users, sessions, content, vectors, and news |
 
-## Project Structure
+The frontend talks only to the backend. The backend and data pipeline connect
+to Supabase with `SUPABASE_API_URL` and `SUPABASE_SERVICE_KEY`.
 
-```
-backend/         FastAPI API server
-frontend/        Next.js web app
-data_pipeline/   Scrape → extract → chunk → embed into Supabase
-supabase/        Local Supabase config and SQL migrations
-```
+## Local development
 
-## Setup
+### Requirements
+
+- Docker
+- Node.js 20+ and pnpm
+- [uv](https://docs.astral.sh/uv/)
+- [just](https://github.com/casey/just)
+- Supabase CLI, available as `npx supabase`
 
 ### 1. Install dependencies
 
@@ -27,194 +32,252 @@ supabase/        Local Supabase config and SQL migrations
 just install
 ```
 
-### 2. Start Supabase
+### 2. Start local Supabase
 
 ```bash
 npx supabase start
+npx supabase status
 ```
 
-On first run, or after schema changes:
-
-```bash
-npx supabase db reset
-```
-
-### 3. Configure environment variables
-
-**Root `.env`** (used by backend and data pipeline):
+Copy the reported API URL and service-role key into the root `.env`:
 
 ```env
 SUPABASE_API_URL=http://127.0.0.1:54321
-SUPABASE_SERVICE_KEY=          # from `npx supabase status` → service_role key
-OPENAI_API_KEY=                # required for embeddings and generation
+SUPABASE_SERVICE_KEY=<local service-role key>
+OPENAI_API_KEY=<development key>
 FRONTEND_URL=http://localhost:3000
-RESEND_API_KEY=                # Resend sending API key
-EMAIL_SENDER=                  # e.g. Patty <news@updates.heypatty.nl>
-
-# LangSmith — optional for tracing, required for running tests
-LANGSMITH_API_KEY=
-LANGSMITH_TRACING=true
-LANGSMITH_PROJECT=expatrag
-
-# Required only if running the web scraper (not needed for store-pages)
-SCRAPE_DO_TOKEN=
+SESSION_COOKIE_SECURE=false
 ```
 
-Resend uses the verified `updates.heypatty.nl` subdomain for outgoing email.
-Sender addresses can use any local part, such as `news@updates.heypatty.nl`.
+Optional integrations:
 
-**`frontend/.env.local`**:
+```env
+SCRAPE_DO_TOKEN=        # IND scraping
+RESEND_API_KEY=         # Sending notification email
+EMAIL_SENDER=           # For example: onboarding@resend.dev
+LANGSMITH_API_KEY=      # Tracing and RAG evaluation
+LANGSMITH_TRACING=true
+LANGSMITH_PROJECT=expatrag
+```
+
+The frontend needs `frontend/.env.local`:
 
 ```env
 NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
 ```
 
-### 4. Run
+### 3. Apply migrations
 
-Open three terminals from the repo root:
-
-```bash
-just backend     # FastAPI on :8000
-just frontend    # Next.js on :3000
-```
-
-The database needs data before the app is useful — see **Data Pipeline** below.
-
-## Docker Local Development
-
-This setup runs the app in Docker while keeping Supabase managed by the Supabase
-CLI on your host machine.
-
-Start Supabase from the repo root:
+For a fresh local database:
 
 ```bash
-npx supabase start
+npx supabase db reset --no-seed
 ```
 
-Make sure the root `.env` contains your local Supabase service role key and
-OpenAI key. Docker Compose reads this file, but overrides the Supabase URL for
-container networking:
-
-```env
-SUPABASE_API_URL=http://127.0.0.1:54321
-SUPABASE_SERVICE_KEY=          # from `npx supabase status` → service_role key
-OPENAI_API_KEY=
-FRONTEND_URL=http://localhost:3000
-```
-
-Run the backend and frontend containers:
+This deletes local data and reapplies every file in `supabase/migrations/` in
+timestamp order. To preserve local data and apply only pending migrations:
 
 ```bash
-docker compose up --build backend frontend
+npx supabase migration up
 ```
 
-The containers use these local URLs:
+Do not edit a migration after it has been applied. Create a new one instead:
+
+```bash
+npx supabase migration new <description>
+```
+
+### 4. Run the application
+
+In separate terminals:
+
+```bash
+just backend
+just frontend
+```
+
+Useful local URLs:
 
 | Service | URL |
 |---|---|
 | Frontend | http://localhost:3000 |
 | Backend API | http://localhost:8000 |
-| Swagger UI | http://localhost:8000/docs |
-| Supabase API from containers | http://host.docker.internal:54321 |
+| API documentation | http://localhost:8000/docs |
+| Supabase Studio | http://127.0.0.1:54323 |
 
-Populate Supabase from the pre-scraped local snapshot:
+The local database starts empty. Populate the RAG corpus from the included IND
+snapshot:
+
+```bash
+just store-pages
+just chunk-pages
+```
+
+## Data pipeline
+
+Run `just` to list all recipes. The main commands are:
+
+| Command | Action |
+|---|---|
+| `just pipeline-full` | Scrape/store IND pages, chunk them, then fetch/store news |
+| `just scrape-pages` | Scrape IND pages to JSONL without database writes |
+| `just store-pages` | Store the included IND JSONL snapshot |
+| `just chunk-pages` | Embed sources that do not already have chunks |
+| `just fetch-news` | Fetch news to JSONL |
+| `just store-news` | Classify and store unseen news |
+| `just weekly-news` | Fetch the past week, store news, and email the digest |
+| `just send-news` | Email the current handoff file; it may resend old items |
+| `just reindex --limit 5` | Create a limited fresh IND snapshot |
+| `just diff` | Compare the latest snapshot with stored sources |
+| `just test` | Run data-pipeline tests |
+
+Run the IND change notification pipeline directly:
+
+```bash
+uv run --project data_pipeline \
+  python3 data_pipeline/diff_detector/pipeline.py --dry-run
+```
+
+`--dry-run` suppresses email delivery, but the pipeline still refreshes the
+indexed corpus. Remove it only when you intend to send notifications.
+
+## Docker development
+
+Supabase remains managed by `npx supabase`; Compose runs the application
+containers. Compose automatically changes the Supabase URL to
+`http://host.docker.internal:54321` while keeping the remaining values from
+`.env`.
+
+```bash
+npx supabase start
+docker compose up --build backend frontend
+```
+
+Run pipeline tasks in containers:
 
 ```bash
 docker compose run --rm store-pages
 docker compose run --rm chunk-pages
+docker compose run --rm weekly-news
 ```
 
-Optional one-off jobs:
+If Docker-created files under `data_pipeline/data/` are not writable by your
+host user, repair their ownership once:
 
 ```bash
-docker compose run --rm fetch-news
-docker compose run --rm store-news
-docker compose run --rm send-news
-docker compose run --rm daily-news
-docker compose run --rm pipeline-full
+sudo chown -R "$(id -u):$(id -g)" data_pipeline/data
 ```
 
-`pipeline-full` runs the scraper and requires `SCRAPE_DO_TOKEN`. The other page
-population commands use `data_pipeline/data/documents.jsonl` and do not need the
-scraper token.
+## Azure deployment
 
-## Data Pipeline
+Production uses Azure Container Apps rather than Docker Compose:
 
-Scrapes IND.nl into JSONL, stores pages in Supabase, chunks and embeds them, then fetches IamExpat RSS news, classifies alert-worthy items, and stores selected news in Supabase.
-
-```bash
-just pipeline-full       # full flow: pages scrape → store → chunk, then news fetch → classify → store
-just scrape-pages        # scrape → JSONL only (no DB writes)
-just store-pages         # existing page JSONL → Supabase sources table
-just chunk-pages         # chunk and embed already-stored pages
-just fetch-news          # IamExpat RSS → data_pipeline/data/news_items.jsonl
-just store-news          # deduplicate, classify, store, and write the fresh handoff
-just send-news           # email the fresh handoff to subscribed users
-just daily-news          # fetch recent news, store alerts, and email subscribers
-```
-
-`data_pipeline/data/documents.jsonl` contains a pre-scraped snapshot, so you can run `just store-pages && just chunk-pages` without needing a `SCRAPE_DO_TOKEN`.
-
-News fetch currently reads the IamExpat RSS feed and writes normalized items published today:
-
-```bash
-uv run --package data-pipeline python3 data_pipeline/news/ingest.py --date 2026-05-14
-uv run --package data-pipeline python3 data_pipeline/news/ingest.py --lookback-hours 48
-uv run --package data-pipeline python3 data_pipeline/news/ingest.py --include-all
-```
-
-The news stages communicate through:
-
-- `data_pipeline/data/news_items.jsonl`: fetched and normalized RSS items.
-- `data_pipeline/data/new_alert_news_items.jsonl`: rows inserted by the latest
-  store run and eligible for standalone notification.
-
-`just daily-news` passes inserted rows directly in memory. Running `just
-send-news` again can resend the current handoff file.
-
-The Azure deployment commands for the scheduled digest are in
-[`docs/daily-news-azure.md`](docs/daily-news-azure.md).
-
-### IND diff notification pipeline
-
-Detects changes to IND.nl since the last ingestion, summarises them with an LLM, and emails each user the changes relevant to their profile.
-
-```bash
-# Full pipeline: scrape → diff → summarise → classify → notify users
-uv run --package data-pipeline python3 data_pipeline/diff_detector/pipeline.py
-
-# Limit pages scraped (faster for local testing)
-uv run --package data-pipeline python3 data_pipeline/diff_detector/pipeline.py --limit 10
-
-# Dry run: renders emails and prints recipient count but does not send
-uv run --package data-pipeline python3 data_pipeline/diff_detector/pipeline.py --dry-run
-
-# Send a test email to all users in the local DB using a hardcoded relevance map (no LLM calls)
-uv run --package data-pipeline python3 data_pipeline/diff_detector/send_test_email.py
-```
-
-Requires `OPENAI_API_KEY`, `RESEND_API_KEY`, and `EMAIL_SENDER` in `.env`. For local dev set `EMAIL_SENDER=onboarding@resend.dev` — no domain verification needed. For production use an address on a domain verified in your Resend account.
-
-## Testing
-
-Tests run the full RAG pipeline against a golden dataset of 10 Q&A pairs and score results with two LLM-as-judge evaluators:
-
-- **Answer Correctness** — generated answer vs. reference answer
-- **Retrieval Relevance** — retrieved chunks vs. the question
-
-Both require LangSmith. On first run the golden dataset is uploaded to LangSmith as `expatrag-golden-v1` and reused on every subsequent run, so results across experiments are comparable. Detailed test results, including scores and judge reasoning, are visible on the [LangSmith website](https://smith.langchain.com) (LangSmith UI).
-
-```bash
-npx supabase start   # must be running
-uv run --package backend pytest backend/tests/test_rag_eval.py -v -s
-```
-
-## Useful URLs
-
-| Service | URL |
+| Azure resource | Image |
 |---|---|
-| Frontend | http://localhost:3000 |
-| Backend API | http://localhost:8000 |
-| Swagger UI | http://localhost:8000/docs |
-| Supabase Studio | http://127.0.0.1:54323 |
-| Supabase API | http://127.0.0.1:54321 |
+| Container App `backend` | `expatrag.azurecr.io/backend:<tag>` |
+| Container App `frontend` | `expatrag.azurecr.io/frontend:<tag>` |
+| Job `notifications-weekly` | `expatrag.azurecr.io/data-pipeline:<tag>` |
+
+The job runs every Monday at 07:00 UTC and executes both the IND change
+notifications and weekly news digest. Production configuration is stored in
+Azure Container Apps secrets, not the local `.env`. The commands below assume
+these Azure resources already exist.
+
+### Deploy manually
+
+Authenticate and choose an immutable tag:
+
+```bash
+TAG=$(date -u +%Y%m%d-%H%M%S)
+REGISTRY=expatrag.azurecr.io
+RESOURCE_GROUP=expatrag-rg
+BACKEND_URL=https://backend.lemonpebble-f3e0ccda.westeurope.azurecontainerapps.io
+
+az acr login --name expatrag
+```
+
+Backend:
+
+```bash
+docker build -f backend/Dockerfile -t "$REGISTRY/backend:$TAG" backend
+docker push "$REGISTRY/backend:$TAG"
+az containerapp update \
+  --resource-group "$RESOURCE_GROUP" \
+  --name backend \
+  --image "$REGISTRY/backend:$TAG"
+```
+
+Frontend:
+
+```bash
+docker build -f frontend/Dockerfile \
+  --build-arg NEXT_PUBLIC_BACKEND_URL="$BACKEND_URL" \
+  -t "$REGISTRY/frontend:$TAG" \
+  frontend
+docker push "$REGISTRY/frontend:$TAG"
+az containerapp update \
+  --resource-group "$RESOURCE_GROUP" \
+  --name frontend \
+  --image "$REGISTRY/frontend:$TAG"
+```
+
+Data pipeline:
+
+```bash
+docker build -f data_pipeline/Dockerfile \
+  -t "$REGISTRY/data-pipeline:$TAG" \
+  data_pipeline
+docker push "$REGISTRY/data-pipeline:$TAG"
+az containerapp job update \
+  --resource-group "$RESOURCE_GROUP" \
+  --name notifications-weekly \
+  --image "$REGISTRY/data-pipeline:$TAG"
+```
+
+### Operate the scheduled job
+
+Run it immediately:
+
+```bash
+az containerapp job start \
+  --resource-group expatrag-rg \
+  --name notifications-weekly
+```
+
+Follow the latest execution:
+
+```bash
+az containerapp job logs show \
+  --resource-group expatrag-rg \
+  --name notifications-weekly \
+  --container notifications-weekly \
+  --follow true \
+  --tail 100 \
+  --format text
+```
+
+List execution history:
+
+```bash
+az containerapp job execution list \
+  --resource-group expatrag-rg \
+  --name notifications-weekly \
+  --output table
+```
+
+Automatic job retries are disabled because retrying after a partial failure
+could send duplicate emails.
+
+## Tests
+
+Data-pipeline tests:
+
+```bash
+just test
+```
+
+Backend RAG evaluation requires local Supabase data, OpenAI, and LangSmith:
+
+```bash
+uv run --project backend pytest backend/tests/test_rag_eval.py -v -s
+```
