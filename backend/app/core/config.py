@@ -16,8 +16,4 @@ LLM_MODEL = "gpt-4.1-mini"
 
 SEARCH_STRATEGY = "multi query hybrid search"   # hybrid, multi-query-vector, multi-query-hybrid
 
-# # Conversation summarization (agent middleware). When the agent's message history
-# # exceeds the trigger token budget, older messages are summarized while the most
-# # recent ones are kept verbatim, so per-request cost stays bounded as chats grow.
-# SUMMARIZATION_TRIGGER_TOKENS = 4000
-# SUMMARIZATION_KEEP_MESSAGES = 10
+CHAT_HISTORY_WINDOW = 20

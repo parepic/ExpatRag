@@ -10,7 +10,6 @@ from typing import Any, Dict, List, Optional
 from typing_extensions import Annotated
 
 from langchain.agents import create_agent
-# from langchain.agents.middleware import SummarizationMiddleware
 from langchain.tools import tool
 from langchain_core.messages import HumanMessage, ToolMessage
 from langchain_core.tools.base import InjectedToolCallId
@@ -164,8 +163,8 @@ def create_simple_rag_agent(
     """Create a simple tool-calling RAG agent for this repository.
 
     Conversation history is supplied at invoke time as prior messages (see
-    run_simple_agent_reply), not baked into the system prompt. A SummarizationMiddleware
-    compresses long histories so per-request token cost stays bounded.
+    run_simple_agent_reply), not baked into the system prompt. History is a sliding
+    window of recent turns, which bounds token cost as chats grow.
     """
     # Local import keeps the established circular-import-safe pattern with rag_service.
     from app.services.rag_service import (
@@ -189,14 +188,7 @@ def create_simple_rag_agent(
         model=model,
         tools=tools,
         system_prompt=system_prompt,
-        state_schema=CustomAgentState
-        # middleware=[
-        #     SummarizationMiddleware(
-        #         model=model,
-        #         trigger=("tokens", SUMMARIZATION_TRIGGER_TOKENS),
-        #         keep=("messages", SUMMARIZATION_KEEP_MESSAGES),
-        #     )
-        # ],
+        state_schema=CustomAgentState,
     ).with_config({"recursion_limit": 5})
 
     workflow = StateGraph(CustomAgentState)
@@ -217,13 +209,14 @@ def run_simple_agent_reply(
     chat_history: Optional[List[Dict[str, str]]] = None,
     model: str = LLM_MODEL,
 ) -> tuple[str, list[dict]]:
-    """Invoke the simple agent and return (answer, citations)."""
-    agent = create_simple_rag_agent(user_id=user_id, model=model)
+    """Invoke the simple agent and return (answer, citations).
 
-    # Feed prior turns as messages (not via the system prompt) so the summarization
-    # middleware can bound them; the current question is the final message.
+    ``chat_history`` is a sliding window of recent turns, fed to the agent as prior
+    messages; the current question is the final message.
+    """
     from app.services.rag_service import _build_chat_history
 
+    agent = create_simple_rag_agent(user_id=user_id, model=model)
     history_messages = _build_chat_history(chat_history or [])
     result = agent.invoke(
         {"messages": [*history_messages, HumanMessage(content=question)]}
