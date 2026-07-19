@@ -32,7 +32,6 @@ import importlib
 import os
 
 from langchain.agents import create_agent
-# from langchain.agents.middleware import SummarizationMiddleware
 from langchain.tools import tool
 from langchain_core.tools.base import InjectedToolCallId
 from langchain_core.messages import ToolMessage, AIMessage, HumanMessage
@@ -40,7 +39,7 @@ from langgraph.graph import MessagesState, StateGraph, START, END
 from langgraph.types import Command
 from pydantic import BaseModel, Field
 
-from app.core.config import LLM_MODEL, SUMMARIZATION_TRIGGER_TOKENS, SUMMARIZATION_KEEP_MESSAGES
+from app.core.config import LLM_MODEL
 from app.core.logging import get_logger
 from app.services.rag_service import (
     retrieve_rag_context_for_agent,
@@ -650,8 +649,8 @@ def create_supervisor_agent(
 
     Note:
         Conversation history is supplied at invoke time as prior messages (see
-        run_supervisor_agent_reply), not baked into the system prompt. A
-        SummarizationMiddleware compresses long histories to keep token cost bounded.
+        run_supervisor_agent_reply), not baked into the system prompt. History is a
+        sliding window of recent turns, which bounds token cost as chats grow.
 
     Returns:
         A compiled supervisor agent that validates input safety and coordinates sub-agents
@@ -686,14 +685,7 @@ def create_supervisor_agent(
         model=model,
         tools=tools,
         system_prompt=system_prompt,
-        state_schema=CustomAgentState
-        # middleware=[
-        #     SummarizationMiddleware(
-        #         model=model,
-        #         trigger=("tokens", SUMMARIZATION_TRIGGER_TOKENS),
-        #         keep=("messages", SUMMARIZATION_KEEP_MESSAGES),
-        #     )
-        # ],
+        state_schema=CustomAgentState,
     ).with_config({"recursion_limit": 10})
     
     # Build the StateGraph with guardrails
@@ -725,11 +717,12 @@ def run_supervisor_agent_reply(
     chat_history: Optional[List[Dict[str, str]]] = None,
     model: str = LLM_MODEL,
 ) -> tuple[str, list[dict]]:
-    """Invoke the supervisor agent and return (answer, citations)."""
-    agent = create_supervisor_agent(project_id=user_id, model=model)
+    """Invoke the supervisor agent and return (answer, citations).
 
-    # Feed prior turns as messages (not via the system prompt) so the summarization
-    # middleware can bound them; the current question is the final message.
+    ``chat_history`` is a sliding window of recent turns, fed to the agent as prior
+    messages; the current question is the final message.
+    """
+    agent = create_supervisor_agent(project_id=user_id, model=model)
     history_messages = _build_chat_history(chat_history or [])
     result = agent.invoke(
         {"messages": [*history_messages, HumanMessage(content=question)]}

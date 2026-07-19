@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 from fastapi import HTTPException
 
+from app.core.config import CHAT_HISTORY_WINDOW
 from app.core.logging import get_logger
 from app.core.supabase_client import supabase
 from app.services.rag_service import generate_rag_reply, _load_project_settings
@@ -50,18 +51,20 @@ def _store_assistant_message(chat_id: str, content: str, citations: list[dict]) 
     return assistant_message_result.data[0]
 
 
-def _load_chat_history(chat_id: str) -> list[dict]:
-    logger.info("loading_chat_history", chat_id=chat_id)
+def _load_chat_history(chat_id: str, limit: int = CHAT_HISTORY_WINDOW) -> list[dict]:
+    """Load the most recent ``limit`` messages for a chat, in chronological order."""
+    logger.info("loading_chat_history", chat_id=chat_id, limit=limit)
     history_result = (
         supabase.table("messages")
         .select("role, content")
         .eq("chat_id", chat_id)
-        .order("created_at", desc=False)
+        .order("created_at", desc=True)
+        .limit(limit)
         .execute()
     )
-
-    logger.info("chat_history_loaded", chat_id=chat_id, message_count=len(history_result.data or []))
-    return history_result.data or []
+    rows = list(reversed(history_result.data or []))
+    logger.info("chat_history_loaded", chat_id=chat_id, message_count=len(rows))
+    return rows
 
 
 def create_chat(user_id: str, message: str) -> dict:
@@ -123,14 +126,15 @@ def add_chat_message(user_id: str, chat_id: str, message: str) -> dict:
 
     user_message = _store_user_message(user_id=user_id, chat_id=chat_id, message=message)
 
-    chat_history = _load_chat_history(chat_id)
-    prior_messages = chat_history[:-1] if chat_history else []
+    # Sliding window of prior turns, excluding the message we just stored (it is passed
+    # separately as `question`).
+    prior_messages = _load_chat_history(chat_id, limit=CHAT_HISTORY_WINDOW + 1)[:-1]
     project_settings = _load_project_settings(user_id)
     reply_text, citations = generate_rag_reply(
         user_id=user_id,
         question=message,
         agent_type=project_settings.get("agent_type"),
-        chat_history=chat_history,
+        chat_history=prior_messages,
     )
 
     logger.info("rag_reply_generated", user_id=user_id, chat_id=chat_id, citation_count=len(citations))
