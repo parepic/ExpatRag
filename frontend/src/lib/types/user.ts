@@ -27,7 +27,7 @@ export type UserProfile = {
 
 export type AuthUser = {
   id: string;
-  username: string;
+  email: string;
   created_at: string;
 } & UserProfile;
 

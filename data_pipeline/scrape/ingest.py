@@ -10,26 +10,26 @@ _pipeline_root = Path(__file__).resolve().parents[1]
 if str(_pipeline_root) not in sys.path:
     sys.path.insert(0, str(_pipeline_root))
 
-from lib.config import DOCUMENTS_JSONL_PATH, PAGE_LIMIT
+from lib.config import DOCUMENTS_JSONL_PATH, PAGE_LIMIT, SCRAPE_SITES
 from lib.jsonl import load_documents_from_jsonl, write_documents_jsonl
-from scrape.discovery import discover_pages
+from scrape.discovery import discover_all_pages
 from scrape.extractor import extract_documents
 from scrape.fetcher import fetch_pages
 from scrape.store import store_documents
 
 
-def ingest(*, skip_data_fetch: bool, store: bool = True) -> None:
+def ingest(*, skip_data_fetch: bool, store: bool = True, use_cache: bool = False) -> None:
     if not skip_data_fetch:
         mode = "discover → fetch → extract → write JSONL"
         if store:
             mode += " → store"
         print(f"Mode: {mode}")
-        pages = discover_pages()
+        pages = discover_all_pages(SCRAPE_SITES)
         if PAGE_LIMIT is not None:
             pages = pages[:PAGE_LIMIT]
             print(f"Limited to {PAGE_LIMIT} pages")
 
-        fetched_pages = fetch_pages(pages)
+        fetched_pages = fetch_pages(pages, use_cache=use_cache)
         documents = extract_documents(fetched_pages)
         write_documents_jsonl(DOCUMENTS_JSONL_PATH, documents)
     else:
@@ -58,8 +58,17 @@ def main() -> None:
         action="store_true",
         help="Write/load JSONL but do not upsert documents into Supabase.",
     )
+    parser.add_argument(
+        "--use-cache",
+        action="store_true",
+        help="Serve pages already in the page cache from disk instead of refetching.",
+    )
     args = parser.parse_args()
-    ingest(skip_data_fetch=args.skip_data_fetch, store=not args.skip_store)
+    ingest(
+        skip_data_fetch=args.skip_data_fetch,
+        store=not args.skip_store,
+        use_cache=args.use_cache,
+    )
     print("Ingest complete")
 
 

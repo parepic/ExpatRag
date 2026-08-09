@@ -11,9 +11,21 @@ from unittest.mock import MagicMock
 from diff_detector.notify import load_all_users
 from diff_detector.email_renderer import get_user_bullets, render_ind_diff_email
 
-BULLET_A = "The RVO point threshold for sponsors increased from 50 to 65."
-BULLET_B = "The penalty lookback window decreased from 4 to 3 years."
-BULLET_C = "Short-term researcher mobility window changed from 180 to 120 days."
+SPONSOR_URL = "https://ind.nl/en/residence-permits/work/apply-for-recognition-as-sponsor"
+RESEARCHER_URL = "https://ind.nl/en/residence-permits/work/short-term-mobility-of-researchers"
+
+BULLET_A = {
+    "text": "The RVO point threshold for sponsors increased from 50 to 65.",
+    "url": SPONSOR_URL,
+}
+BULLET_B = {
+    "text": "The penalty lookback window decreased from 4 to 3 years.",
+    "url": SPONSOR_URL,
+}
+BULLET_C = {
+    "text": "Short-term researcher mobility window changed from 180 to 120 days.",
+    "url": RESEARCHER_URL,
+}
 
 # A minimal relevance map with two populated slots
 RELEVANCE_MAP = {
@@ -151,13 +163,35 @@ class TestRenderIndDiffEmail:
 
     def test_plain_text_contains_bullets(self):
         _, plain_text, _ = render_ind_diff_email(HSM_USER, RELEVANCE_MAP)
-        assert BULLET_A in plain_text
-        assert BULLET_B in plain_text
+        assert BULLET_A["text"] in plain_text
+        assert BULLET_B["text"] in plain_text
 
     def test_html_contains_bullets(self):
         _, _, html = render_ind_diff_email(HSM_USER, RELEVANCE_MAP)
-        assert BULLET_A in html
-        assert BULLET_B in html
+        assert BULLET_A["text"] in html
+        assert BULLET_B["text"] in html
+
+    def test_plain_text_includes_source_url(self):
+        _, plain_text, _ = render_ind_diff_email(HSM_USER, RELEVANCE_MAP)
+        assert SPONSOR_URL in plain_text
+
+    def test_html_links_to_source_page(self):
+        _, _, html = render_ind_diff_email(HSM_USER, RELEVANCE_MAP)
+        assert f'href="{SPONSOR_URL}"' in html
+
+    def test_bullet_without_url_renders_no_link(self):
+        map_without_url = {
+            **RELEVANCE_MAP,
+            "purpose_of_stay": {
+                **RELEVANCE_MAP["purpose_of_stay"],
+                "Highly Skilled Migrant": [{"text": "A change with no source.", "url": ""}],
+            },
+        }
+        # Only purpose_of_stay is set, so no other slot can contribute a linked bullet.
+        user = {"purpose_of_stay": "Highly Skilled Migrant"}
+        _, plain_text, html = render_ind_diff_email(user, map_without_url)
+        assert "A change with no source." in plain_text
+        assert "View the IND page" not in html
 
     def test_html_is_valid_document(self):
         _, _, html = render_ind_diff_email(HSM_USER, RELEVANCE_MAP)
@@ -168,7 +202,10 @@ class TestRenderIndDiffEmail:
         user_with_partner = {**HSM_USER, "has_fiscal_partner": True}
         map_with_partner_bullet = {
             **RELEVANCE_MAP,
-            "has_fiscal_partner": {True: ["New tax benefit for fiscal partners."], False: []},
+            "has_fiscal_partner": {
+                True: [{"text": "New tax benefit for fiscal partners.", "url": SPONSOR_URL}],
+                False: [],
+            },
         }
         _, plain_text, html = render_ind_diff_email(user_with_partner, map_with_partner_bullet)
         assert "True" not in plain_text

@@ -8,9 +8,14 @@ from typing import Literal
 
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
+from langsmith import traceable
 from pydantic import BaseModel, Field
 
 from lib.env import load_pipeline_env
+
+# LangSmith decides whether to trace when the first traced call happens, so the
+# root .env has to be loaded at import — not lazily inside the chain factory below.
+load_pipeline_env()
 
 
 NEWS_ALERT_MODEL = os.getenv("PATTY_WATCH_NEWS_ALERT_MODEL", "gpt-4.1-mini")
@@ -87,6 +92,11 @@ def _get_news_alert_chain():
     return NEWS_ALERT_PROMPT | llm.with_structured_output(NewsAlertDecision)
 
 
+@traceable(
+    run_type="chain",
+    name="classify_news_item",
+    tags=["classify_news_item"],
+)
 def classify_news_item(item: dict) -> NewsAlertDecision:
     """Classify one RSS news item using its title and summary only."""
     title = item.get("title") or ""

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from diff_detector.classify import RelevanceMap
+from html import escape
+
+from diff_detector.classify import RelevanceMap, RelevantChange
 from lib.user_attributes import USER_PROFILE_ATTRIBUTES
 
 _BOOL_SECTION_HEADERS: dict[str, dict[bool, str]] = {
@@ -19,26 +21,36 @@ def _resolve_value_label(attribute: str, value: str | bool) -> str:
     return str(value)
 
 
-def get_user_bullets(user: dict, relevance_map: RelevanceMap) -> dict[str, list[str]]:
-    """Return {value_label: [bullets]} for every attribute where this user has relevant changes.
+def get_user_bullets(
+    user: dict, relevance_map: RelevanceMap
+) -> dict[str, list[RelevantChange]]:
+    """Return {value_label: [{text, url}]} for every attribute where this user has changes.
 
     Keys are human-readable value labels (e.g. "Highly Skilled Migrant", "someone under 30").
-    Bullets that appear in more than one slot are only kept in the first one to avoid repetition.
+    A change appearing in more than one slot is only kept in the first one to avoid
+    repetition; the same sentence from two different pages counts as two changes.
     """
-    result: dict[str, list[str]] = {}
-    seen: set[str] = set()
+    result: dict[str, list[RelevantChange]] = {}
+    seen: set[tuple[str, str]] = set()
 
     for attribute in USER_PROFILE_ATTRIBUTES:
         user_value = user.get(attribute)
         if user_value is None:
             continue
         slot = relevance_map.get(attribute, {}).get(user_value, [])
-        fresh = [b for b in slot if b not in seen]
+        fresh = [c for c in slot if (c["text"], c["url"]) not in seen]
         if fresh:
             result[_resolve_value_label(attribute, user_value)] = fresh
-            seen.update(fresh)
+            seen.update((c["text"], c["url"]) for c in fresh)
 
     return result
+
+
+def _source_link(url: str) -> str:
+    """The 'View the IND page' link appended to a bullet, or nothing when no URL is known."""
+    if not url:
+        return ""
+    return f'<br><a class="source" href="{escape(url, quote=True)}">View the IND page</a>'
 
 
 def render_ind_diff_email(
@@ -63,19 +75,24 @@ def render_ind_diff_email(
         "website that may be relevant to your profile.",
         "",
     ]
-    for value_label, bullets in sections.items():
+    for value_label, changes in sections.items():
         lines.append(f"As {value_label}:")
-        for bullet in bullets:
-            lines.append(f"  • {bullet}")
+        for change in changes:
+            lines.append(f"  • {change['text']}")
+            if change["url"]:
+                lines.append(f"    {change['url']}")
         lines.append("")
     plain_text = "\n".join(lines)
 
     # --- HTML ---
     sections_html_parts: list[str] = []
-    for value_label, bullets in sections.items():
+    for value_label, changes in sections.items():
         # TODO: "As €60,000 - €80,000" reads awkwardly — consider per-attribute header templates
         header = f"As {value_label}"
-        bullet_items = "\n".join(f"            <li>{b}</li>" for b in bullets)
+        bullet_items = "\n".join(
+            f"            <li>{change['text']}{_source_link(change['url'])}</li>"
+            for change in changes
+        )
         sections_html_parts.append(
             f'        <div class="section">\n'
             f"          <h3>{header}</h3>\n"
@@ -132,7 +149,14 @@ def render_ind_diff_email(
       color: #003082;
     }}
     .section ul {{ margin: 0; padding-left: 18px; }}
-    .section li {{ margin-bottom: 6px; line-height: 1.55; color: #333; }}
+    .section li {{ margin-bottom: 10px; line-height: 1.55; color: #333; }}
+    .section li a.source {{
+      display: inline-block;
+      margin-top: 3px;
+      font-size: 12px;
+      color: #003082;
+      text-decoration: none;
+    }}
     .footer {{
       font-size: 12px;
       color: #999;

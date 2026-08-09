@@ -39,6 +39,11 @@ def main() -> None:
         help="Skip embedding chunking (no writes to document_chunks).",
     )
     parser.add_argument(
+        "--use-cache",
+        action="store_true",
+        help="Scrape step only: serve pages already in the page cache instead of refetching.",
+    )
+    parser.add_argument(
         "--skip-news",
         action="store_true",
         help="Skip news RSS fetching, classification, and storage.",
@@ -73,7 +78,7 @@ def main() -> None:
     args = parser.parse_args()
 
     print("Starting data pipeline")
-    ingest(skip_data_fetch=args.skip_data_fetch, store=True)
+    ingest(skip_data_fetch=args.skip_data_fetch, store=True, use_cache=args.use_cache)
 
     if not args.skip_chunk:
         stats = chunk_sources(limit=args.limit, dry_run=args.dry_run)

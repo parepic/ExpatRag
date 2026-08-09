@@ -10,7 +10,9 @@ import {
   Settings2,
 } from "lucide-react";
 
+import { LogoutButton } from "@/components/auth/LogoutButton";
 import { Button } from "@/components/ui/button";
+import { useAuthContext } from "@/context/AuthContext";
 import { ChatProvider, useChatContext } from "@/context/ChatContext";
 
 type AppLayoutProps = {
@@ -78,6 +80,7 @@ function AppShell({ children }: AppLayoutProps) {
   const isInSettingsRoute = isSettingsRoute(pathname);
   const breadcrumbs = getBreadcrumbs(pathname);
   const { activeChatId, chats, setActiveChatId } = useChatContext();
+  const { user } = useAuthContext();
 
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
@@ -182,6 +185,13 @@ function AppShell({ children }: AppLayoutProps) {
         ) : (
           <div className="flex-1" />
         )}
+
+        <div className="border-t border-sidebar-border px-3 py-3">
+          <p className="truncate px-2 pb-1 text-xs text-muted-foreground">
+            {user.email}
+          </p>
+          <LogoutButton />
+        </div>
       </aside>
 
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">

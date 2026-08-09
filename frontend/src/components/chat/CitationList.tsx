@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
+import { dedupeCitationsByUrl } from "@/lib/citations";
 import type { Citation } from "@/lib/types/chat";
 
 type CitationListProps = {
@@ -12,10 +13,11 @@ type CitationListProps = {
 
 export function CitationList({ citations }: CitationListProps) {
   const [openIndex, setOpenIndex] = useState(0);
+  const uniqueCitations = useMemo(() => dedupeCitationsByUrl(citations), [citations]);
 
   return (
     <div className="mt-4 space-y-2">
-      {citations.map((citation, index) => {
+      {uniqueCitations.map((citation, index) => {
         const isOpen = openIndex === index;
 
         return (

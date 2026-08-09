@@ -19,7 +19,6 @@ def store_documents(documents: list[dict]) -> int:
         {
             "title": doc["title"],
             "source_url": doc["url"],
-            "type": "webpage",
             "content": doc["content"],
             "metadata": {
                 "category": doc.get("category"),
@@ -27,6 +26,11 @@ def store_documents(documents: list[dict]) -> int:
                 "fetch_date": doc.get("fetch_date"),
             },
             "last_synced_at": now,
+            # `type` holds the site a page came from ("ind.nl"). Callers that rebuild a
+            # page from stored data (stage 6) have no source to pass, so the key is left
+            # out entirely rather than sent as null — an upsert without it keeps the
+            # value already on the row.
+            **({"type": doc["source"]} if doc.get("source") else {}),
         }
         for doc in documents
     ]

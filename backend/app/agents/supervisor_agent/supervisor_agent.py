@@ -39,7 +39,8 @@ from langgraph.graph import MessagesState, StateGraph, START, END
 from langgraph.types import Command
 from pydantic import BaseModel, Field
 
-from app.core.config import LLM_MODEL
+from app.core.config import LLM_MODEL, WEB_SEARCH_RESTRICT_TO_OFFICIAL_DOMAINS
+from app.core.dutch_regulatory_domains import WEB_SEARCH_INCLUDE_DOMAINS
 from app.core.logging import get_logger
 from app.services.rag_service import (
     retrieve_rag_context_for_agent,
@@ -162,7 +163,10 @@ def get_supervisor_system_prompt(
 2. **Web Search Agent** (search_web):
    - Searches the internet for current information
    - Use for current events, general knowledge, external information
-   - ONLY use this tool if asked by the user or mentioned in the question
+   - Use this tool in exactly two situations:
+     (a) the user asks for a web/internet search, or mentions it in the question, OR
+     (b) rag_search reported that it found no relevant information
+   - When rag_search does answer the question, answer from that and do not search the web as well
 
 ### Core Responsibilities
 
@@ -171,7 +175,7 @@ def get_supervisor_system_prompt(
 - For complex queries, coordinate multiple agents in sequence
 - Synthesize results from multiple agents into coherent answers
 - Prioritize project documents for project-specific questions
-- Use web search ONLY if asked by the user or mentioned in the question
+- Use web search when the user asks for it, or as a fallback once rag_search finds nothing
 - Use the chat history to understand the context and references in the current question
 
 ### Query Routing Rules
@@ -192,6 +196,19 @@ def get_supervisor_system_prompt(
 
 **ALWAYS use the RAG tool for the questions**
 **Return as much information that is given from the RAG tool as possible to the user**
+
+**Web search fallback:**
+When rag_search replies "No relevant information found in the project documents for this
+query." — or replies that the documents do not cover, do not specify, or lack details on
+what was asked — treat that as a miss. Do NOT stop there, do NOT answer from your own
+knowledge, and do NOT ask the user for permission to continue. Immediately call search_web
+with a reformulated, specific query and answer from those results instead.
+
+Never ask "would you like me to look this up?" — just call the tool. Asking instead of
+searching is always the wrong move.
+
+When an answer comes from web search rather than the project documents, say so, so the user
+knows it is not from the curated knowledge base.
 
 For all other queries, you MUST route to the appropriate agent(s) and synthesize their responses. Your role is coordination and synthesis, not direct knowledge provision.
 """
@@ -258,6 +275,24 @@ def create_rag_tool(project_id: str):
                 context=context,
                 user_profile_text=user_profile_text,
             )
+
+            # Retrieval can return on-topic chunks that still miss what was asked, producing a
+            # "the documents don't specify..." answer. That reads as success upstream, so nothing
+            # escalates to web search. Report it as an explicit miss with no citations, which is
+            # what the supervisor's fallback keys on.
+            if not rag_answer.answers_question:
+                logger.info("rag_tool_context_insufficient", retrieved_chunk_count=len(citations))
+                return Command(
+                    update={
+                        "messages": [
+                            ToolMessage(
+                                "No relevant information found in the project documents for this query.",
+                                tool_call_id=tool_call_id,
+                            )
+                        ]
+                    }
+                )
+
             used_citations = filter_citations_by_used_refs(citations, rag_answer.used_chunk_refs)
 
             return Command(
@@ -323,7 +358,7 @@ For every user question:
 2. Use the `rag_search` tool immediately with a clear and relevant query derived from the user's question. Use the knowledge base domain and the user profile (when available) to add precise terms to the query.
 3. Carefully review the retrieved documents and base your entire answer on the RAG results.
 4. If the retrieved information fully answers the user's question, respond clearly and completely using that information.
-5. If the retrieved information is insufficient or incomplete, explicitly state that and provide helpful suggestions or guidance based on what you found.
+5. If the retrieved information is insufficient or incomplete, say so plainly and state exactly what is missing. Do NOT fill the gap with general knowledge from your training, do NOT offer to look elsewhere, and do NOT ask the user whether to continue — escalation is handled for you.
 6. Always present answers in a clear, well-structured, and conversational manner.
 
 **Never answer without first querying the RAG tool. This ensures every response is grounded in project-specific context and documentation.**"""
@@ -348,6 +383,7 @@ def create_web_search_agent(
     model: str = "gpt-4o-mini",
     use_tavily: bool = True,
     domain_context: Optional[str] = None,
+    restrict_to_official_domains: Optional[bool] = None,
 ):
     """
     Create an agent with web search capabilities.
@@ -360,6 +396,9 @@ def create_web_search_agent(
         use_tavily: Kept for compatibility; Tavily is the only supported backend.
         domain_context: Optional description of the typical domain. Used as a light hint to add
                         location context to searches, without overriding the user's explicit scope.
+        restrict_to_official_domains: When true, Tavily only returns results from the official
+                        Dutch government/regulatory allowlist. Defaults to the
+                        WEB_SEARCH_RESTRICT_TO_OFFICIAL_DOMAINS setting.
 
     Returns:
         A configured LangGraph agent for web search
@@ -367,10 +406,21 @@ def create_web_search_agent(
     if not os.getenv("TAVILY_API_KEY"):
         raise RuntimeError("TAVILY_API_KEY must be set for web search")
 
+    if restrict_to_official_domains is None:
+        restrict_to_official_domains = WEB_SEARCH_RESTRICT_TO_OFFICIAL_DOMAINS
+
+    search_kwargs = {"max_results": 5, "search_depth": "advanced"}
+    if restrict_to_official_domains:
+        search_kwargs["include_domains"] = WEB_SEARCH_INCLUDE_DOMAINS
+
     tavily_module = importlib.import_module("langchain_tavily")
-    search_tool = tavily_module.TavilySearch(max_results=5, search_depth="advanced")
-    logger.info("supervisor_web_search_using_tavily")
-    
+    search_tool = tavily_module.TavilySearch(**search_kwargs)
+    logger.info(
+        "supervisor_web_search_using_tavily",
+        restricted_to_official_domains=restrict_to_official_domains,
+        include_domain_count=len(WEB_SEARCH_INCLUDE_DOMAINS) if restrict_to_official_domains else 0,
+    )
+
     tools = [search_tool]
 
     current_date = datetime.now().strftime("%B %d, %Y")
@@ -384,11 +434,24 @@ def create_web_search_agent(
             "something outside this domain.\n"
         )
 
+    restriction_hint = ""
+    if restrict_to_official_domains:
+        restriction_hint = (
+            "\n**Source restriction:** Your search tool is limited to official Dutch government "
+            "and regulatory websites (IND, Belastingdienst, Rijksoverheid, UWV, municipalities "
+            "and similar), plus EU institution sites. It cannot reach blogs, forums or "
+            "relocation agencies.\n"
+            "If a search returns no results, that means no official source covers the question — "
+            "say so plainly and suggest which authority the user should contact. Never fill the "
+            "gap with remembered or assumed facts, and never present an answer as official when "
+            "no search result supports it.\n"
+        )
+
     system_prompt = f"""You are a specialized web search assistant.
 Your job is to search the internet for current information and provide accurate, up-to-date answers.
 
 **Current Date: {current_date}**
-{domain_hint}
+{domain_hint}{restriction_hint}
 For every query you receive:
 1. **Reformulate vague queries into specific search terms** before searching
 2. Use the web search tool with clear, specific queries
@@ -503,7 +566,25 @@ def create_supervisor_tools(
             citation_count=len(citations),
             response_length=len(content),
         )
-        
+
+        # No citations means the knowledge base did not ground this answer: either nothing was
+        # retrieved, or the grounded answerer used none of the retrieved chunks. The RAG agent
+        # still replies in prose ("the documents don't provide specific details..."), which the
+        # supervisor reads as a successful answer and stops on. Replace it with the explicit
+        # miss signal the supervisor's web-search fallback rule matches against.
+        if not citations:
+            logger.info("supervisor_rag_tool_no_citations", project_id=project_id)
+            return Command(
+                update={
+                    "messages": [
+                        ToolMessage(
+                            "No relevant information found in the project documents for this query.",
+                            tool_call_id=tool_call_id,
+                        )
+                    ]
+                }
+            )
+
         # Return Command that updates both messages AND citations
         return Command(
             update={

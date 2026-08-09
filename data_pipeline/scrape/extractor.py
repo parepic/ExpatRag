@@ -38,6 +38,7 @@ def extract_documents(fetched_pages: list[dict]) -> list[dict]:
             "url": url,
             "title": title,
             "category": page["category"],
+            "source": page.get("source"),
             "content": content,
             "elements": element_dicts,
             "fetch_date": today,

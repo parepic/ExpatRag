@@ -127,19 +127,48 @@ Run `just` to list all recipes. The main commands are:
 | `just store-news` | Classify and store unseen news |
 | `just weekly-news` | Fetch the past week, store news, and email the digest |
 | `just send-news` | Email the current handoff file; it may resend old items |
-| `just reindex --limit 5` | Create a limited fresh IND snapshot |
-| `just diff` | Compare the latest snapshot with stored sources |
+| `just ind-pipeline` | Run all six IND diff stages in order (see below) |
 | `just test` | Run data-pipeline tests |
 
-Run the IND change notification pipeline directly:
+### IND diff pipeline stages
+
+The IND change-notification pipeline is split into six independent stages that
+share a **run directory** (default `data_pipeline/data/latest/`). Each stage reads
+the previous stage's JSON file and writes its own, so intermediate state is saved
+and any stage can be re-run without repeating earlier work. Run them in order:
+
+| Stage | Command | Reads | Writes |
+|---|---|---|---|
+| 1 scrape | `just reindex --limit 5` | IND site | `snapshot.json` |
+| 2 diff | `just diff` | `snapshot.json` + corpus | `diff.json` |
+| 3 summarize | `just summarize` | `diff.json` | `summaries.json` |
+| 4 classify | `just classify` | `summaries.json` | `relevance.json` |
+| 5 notify | `just notify --dry-run` | `relevance.json` + users | `notify_report.json` |
+| 6 update-corpus | `just update-corpus` | `diff.json` | `corpus_update.json` |
+
+Every stage accepts `--data-dir DIR` to use a different run directory (the default
+is overwritten each run; pass a distinct dir to keep a run's artifacts). Stages 3
+and 4 call the LLM; stage 5 sends email unless `--dry-run` is passed.
+
+Run the whole pipeline in one go:
 
 ```bash
+just ind-pipeline --dry-run
+# or directly:
 uv run --project data_pipeline \
   python3 data_pipeline/diff_detector/pipeline.py --dry-run
 ```
 
 `--dry-run` suppresses email delivery, but the pipeline still refreshes the
 indexed corpus. Remove it only when you intend to send notifications.
+
+### Tracing
+
+With `LANGSMITH_TRACING=true` in the root `.env`, the pipeline's LLM calls are
+traced to the same LangSmith project as the backend. `just ind-pipeline` and
+`just weekly-news` each produce one trace per run, with every diff summarisation,
+relevance classification, and news classification nested under it; running a
+single stage (`just summarize`) traces that stage's calls on their own.
 
 ## Docker development
 

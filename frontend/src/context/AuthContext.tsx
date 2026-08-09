@@ -28,7 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     if (user) {
-      console.log("[AuthContext] Authenticated user:", user.username);
+      console.log("[AuthContext] Authenticated user:", user.email);
       return;
     }
 

@@ -12,7 +12,7 @@ describe("useAuth", () => {
     global.fetch = jest.fn().mockResolvedValue(
       {
         ok: true,
-        json: async () => ({ id: "user-1", username: "alice" }),
+        json: async () => ({ id: "user-1", email: "alice@example.com" }),
       },
     ) as typeof fetch;
 
@@ -22,7 +22,7 @@ describe("useAuth", () => {
 
     await waitFor(() => {
       expect(result.current).toEqual({
-        user: { id: "user-1", username: "alice" },
+        user: { id: "user-1", email: "alice@example.com" },
         isLoading: false,
       });
     });

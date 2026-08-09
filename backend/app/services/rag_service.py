@@ -28,6 +28,14 @@ class RAGAnswer(BaseModel):
         default_factory=list,
         description="Subset of candidate chunk references (1..N) actually used to answer",
     )
+    answers_question: bool = Field(
+        default=True,
+        description=(
+            "True only if the retrieved context actually answers the question that was asked. "
+            "False when the context merely covers the general topic while missing the specific "
+            "thing asked, or when answering would require knowledge beyond the context."
+        ),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -418,6 +426,11 @@ def generate_grounded_answer(
         "information and do not invent facts beyond it. Each context block is labelled with a "
         "chunk_ref number. In used_chunk_refs, return ONLY the chunk_ref numbers you actually "
         "relied on to write the answer; omit any chunk you did not use.\n\n"
+        "Set answers_question to false whenever the context does not actually answer what was "
+        "asked — including when it discusses the general topic but omits the specific detail "
+        "requested, or when you would need knowledge beyond the context to be useful. Judge the "
+        "context, not your own knowledge: if you find yourself about to write that the documents "
+        "do not specify something, answers_question is false.\n\n"
         f"User profile:\n{user_profile_text}\n\n"
         f"Context:\n{context}\n\n"
         f"Question:\n{question}"

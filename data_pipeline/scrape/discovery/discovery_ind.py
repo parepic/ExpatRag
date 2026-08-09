@@ -1,18 +1,18 @@
+"""Page discovery for ind.nl — scrapes the links out of IND's HTML sitemap page."""
+
 from urllib.parse import urljoin
 
 import requests
 from lxml import html
 
-from lib.config import BASE_URL, SITEMAP_PATH
-
-from .fetcher import scrape_do_url
-
-EXCLUDE_PREFIXES = (
-    "/en/service-contact",
-    "/en/form",
-    "/en/search",
-    "/en/decision-aid",
+from lib.scrape_config.ind import (
+    BASE_URL,
+    EXCLUDE_PREFIXES,
+    SITEMAP_PATH,
+    SOURCE_NAME,
 )
+
+from ..fetcher import scrape_do_url
 
 
 def _categorize(path: str) -> str:
@@ -27,7 +27,7 @@ def _categorize(path: str) -> str:
 
 
 def discover_pages() -> list[dict]:
-    """Fetch the IND HTML sitemap and return a list of page dicts with url and category."""
+    """Fetch the IND HTML sitemap and return page dicts with url, category, and source."""
     sitemap_url = BASE_URL + SITEMAP_PATH
     print(f"Fetching sitemap: {sitemap_url}")
 
@@ -58,6 +58,7 @@ def discover_pages() -> list[dict]:
         pages.append({
             "url": url,
             "category": _categorize(path),
+            "source": SOURCE_NAME,
         })
 
     print(f"Discovered {len(pages)} pages")

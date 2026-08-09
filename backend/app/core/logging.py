@@ -5,7 +5,6 @@ import os
 import socket
 import sys
 from contextvars import ContextVar
-from pathlib import Path
 from typing import Optional
 
 import structlog
@@ -14,9 +13,11 @@ import structlog
 request_id_var: ContextVar[Optional[str]] = ContextVar("request_id", default=None)
 user_id_var: ContextVar[Optional[str]] = ContextVar("user_id", default=None)
 
-# Overkill right now, but will be useful once we deploy.
-POD_NAME = os.getenv("POD_NAME", "local")
+# Populated by the platform once deployed. POD_NAME falls back to the Azure Container
+# Apps replica name, then "local" for dev; REVISION is only set in the cloud.
+POD_NAME = os.getenv("POD_NAME") or os.getenv("CONTAINER_APP_REPLICA_NAME", "local")
 HOST_NAME = socket.gethostname()
+REVISION = os.getenv("CONTAINER_APP_REVISION", "")
 
 
 # Inject the context variables, pod name and host name in logs.
@@ -31,12 +32,14 @@ def add_context_info(_: logging.Logger, __: str, event_dict: dict) -> dict:
 
     event_dict["pod_name"] = POD_NAME
     event_dict["host_name"] = HOST_NAME
+    if REVISION:
+        event_dict["revision"] = REVISION
     return event_dict
 
 
-def configure_logging(log_filename: str | None = None) -> None:
-    # Set the level before which logs are ignored. 
-    log_level = logging.INFO
+def configure_logging() -> None:
+    # Minimum level to emit; override via LOG_LEVEL (e.g. DEBUG, WARNING) without a redeploy.
+    log_level = getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper(), logging.INFO)
 
     # Setup the root logger
     root_logger = logging.getLogger()
@@ -45,18 +48,13 @@ def configure_logging(log_filename: str | None = None) -> None:
 
     formatter = logging.Formatter("%(message)s")
 
+    # Log JSON to stdout only. The runtime/platform captures and routes the stream
+    # (e.g. Azure Container Apps -> Log Analytics). We deliberately do NOT write log
+    # files: container filesystems are ephemeral, files grow unbounded, and there is
+    # no aggregation across replicas.
     stream_handler = logging.StreamHandler(sys.stdout)
     stream_handler.setFormatter(formatter)
     root_logger.addHandler(stream_handler)
-
-    # File logging 
-    log_filename = log_filename or os.getenv("LOG_FILE", "logs/application.log")
-    file_path = Path(log_filename)
-    file_path.parent.mkdir(parents=True, exist_ok=True)
-    file_handler = logging.FileHandler(file_path, encoding="utf-8")
-    file_handler.setFormatter(formatter)
-    root_logger.addHandler(file_handler)
-
 
     # Optional: reduce noisy libs i.e dependent packages logs are not needed
     # Just set the level to something below INFO

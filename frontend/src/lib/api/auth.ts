@@ -40,3 +40,14 @@ export async function register(
     throw new ApiError(res.status, body?.detail ?? "Registration failed");
   }
 }
+
+export async function logout(): Promise<void> {
+  const res = await fetch(`${API_BASE}/auth/logout`, {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new ApiError(res.status, body?.detail ?? "Logout failed");
+  }
+}
